@@ -1,5 +1,6 @@
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 import structlog
 from fastapi import FastAPI
@@ -32,8 +33,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if settings.telegram_webhook_secret
             else None
         )
-        if settings.telegram_bot_mode is BotMode.WEBHOOK:
-            await _register_webhook(app, settings)
+        # Telegram may be unreachable (blocked egress, outage); the API must still start.
+        webhook_task = (
+            asyncio.create_task(_register_webhook(app, settings))
+            if settings.telegram_bot_mode is BotMode.WEBHOOK
+            else None
+        )
 
         log.info(
             "app.started", environment=settings.environment, bot_mode=settings.telegram_bot_mode
@@ -41,6 +46,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             yield
         finally:
+            if webhook_task:
+                webhook_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await webhook_task
             await bot.session.close()
             await engine.dispose()
 
@@ -53,12 +62,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
+WEBHOOK_RETRY_MAX_DELAY = 300.0
+
+
 async def _register_webhook(app: FastAPI, settings: Settings) -> None:
+    """Register the webhook, retrying with backoff until Telegram is reachable."""
     if not settings.public_base_url or not app.state.webhook_secret:
-        raise RuntimeError("Webhook mode needs PUBLIC_BASE_URL and TELEGRAM_WEBHOOK_SECRET")
-    await app.state.bot.set_webhook(
-        url=settings.public_base_url.rstrip("/") + webhook.WEBHOOK_PATH,
-        secret_token=app.state.webhook_secret,
-        drop_pending_updates=False,
-    )
-    await configure_menu_button(app.state.bot, settings)
+        log.error(
+            "telegram.webhook.misconfigured", missing="PUBLIC_BASE_URL/TELEGRAM_WEBHOOK_SECRET"
+        )
+        return
+
+    delay = 5.0
+    while True:
+        try:
+            await app.state.bot.set_webhook(
+                url=settings.public_base_url.rstrip("/") + webhook.WEBHOOK_PATH,
+                secret_token=app.state.webhook_secret,
+                drop_pending_updates=False,
+            )
+            await configure_menu_button(app.state.bot, settings)
+        except Exception as exc:
+            log.warning("telegram.webhook.register_failed", error=str(exc), retry_in=delay)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, WEBHOOK_RETRY_MAX_DELAY)
+        else:
+            log.info("telegram.webhook.registered")
+            return

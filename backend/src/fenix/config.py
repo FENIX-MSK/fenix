@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     telegram_webhook_secret: SecretStr | None = None
     # Where the Mini App is served. Telegram requires HTTPS outside its test environment.
     webapp_url: str | None = None
+    # Outbound proxy for the Bot API (http://, socks5://). Needed where Telegram is blocked.
+    telegram_proxy_url: SecretStr | None = None
 
     @property
     def is_production(self) -> bool:
