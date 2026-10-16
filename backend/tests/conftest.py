@@ -1,5 +1,8 @@
 import asyncio
+import importlib
+import importlib.util
 import os
+import pkgutil
 import subprocess
 import sys
 from collections.abc import AsyncIterator, Iterator
@@ -23,11 +26,13 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 BACKEND = Path(__file__).resolve().parent.parent
 
-# Register every module's tables in Base.metadata.
-import fenix.modules.catalog.models  # noqa: E402
-import fenix.modules.identity.models  # noqa: E402
-import fenix.modules.locations.models  # noqa: E402, F401
+import fenix.modules  # noqa: E402
 from fenix.platform.db import Base, create_engine, create_session_factory  # noqa: E402
+
+# Register every module's tables in Base.metadata (same discovery as migrations/env.py).
+for _module in pkgutil.iter_modules(fenix.modules.__path__):
+    if importlib.util.find_spec(f"fenix.modules.{_module.name}.models"):
+        importlib.import_module(f"fenix.modules.{_module.name}.models")
 
 
 async def _create_database_if_missing(url: str) -> None:

@@ -1,6 +1,8 @@
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
 
 import { api } from '../api/client'
+import { useCart } from './cart'
+import { MainAction } from './MainAction'
 import type { DishDetail, MenuDish, ModifierGroup } from '../api/types'
 import { platform } from '../platform'
 import { formatPrice } from './format'
@@ -91,13 +93,13 @@ export function DishSheet({ dish, onClose }: Props) {
             </button>
           </div>
         )}
-        {loaded.kind === 'ready' && <DishChoice dish={loaded.dish} />}
+        {loaded.kind === 'ready' && <DishChoice dish={loaded.dish} onAdded={onClose} />}
       </div>
     </div>
   )
 }
 
-function DishChoice({ dish }: { dish: DishDetail }) {
+function DishChoice({ dish, onAdded }: { dish: DishDetail; onAdded: () => void }) {
   const [sizeId, setSizeId] = useState<string | null>(() => dish.sizes.find((s) => s.available)?.id ?? null)
   const [chosen, setChosen] = useState<Record<string, string[]>>({})
   const [quantity, setQuantity] = useState(1)
@@ -106,6 +108,31 @@ function DishChoice({ dish }: { dish: DishDetail }) {
   const modifierIds = dish.groups.flatMap((g) => chosen[g.id] ?? [])
   const price = useDishPrice({ dishId: dish.id, sizeId, modifierIds, quantity })
   const missing = new Set(price.kind === 'ready' ? price.price.missing_groups.map((g) => g.id) : [])
+  const { set: setCart } = useCart()
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const addPrice = price.kind === 'ready' && price.price.complete ? price.price.total_price : null
+  const canAdd = addPrice !== null && sizeId !== null
+
+  const add = async () => {
+    if (!canAdd || !sizeId) return
+    setAdding(true)
+    setAddError(null)
+    try {
+      const { data } = await api.POST('/api/v1/cart/items', {
+        body: { dish_id: dish.id, size_id: sizeId, modifier_ids: modifierIds, quantity },
+      })
+      if (data) {
+        setCart(data)
+        platform.haptic('success')
+        return onAdded()
+      }
+    } catch {
+      // below
+    }
+    setAdding(false)
+    setAddError('Не получилось добавить, попробуйте ещё раз.')
+  }
 
   const toggle = (group: ModifierGroup, modifierId: string) => {
     const current = chosen[group.id] ?? []
@@ -216,6 +243,13 @@ function DishChoice({ dish }: { dish: DishDetail }) {
         </div>
         <Total price={price} />
       </div>
+      {addError && <p className="error-text">{addError}</p>}
+      <MainAction
+        text={addPrice !== null ? `Добавить · ${formatPrice(addPrice)}` : 'Добавить'}
+        disabled={!canAdd}
+        loading={adding}
+        onClick={add}
+      />
     </>
   )
 }

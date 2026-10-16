@@ -2,6 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 
 import type { MenuDish } from './api/types'
 import { AboutScreen } from './guest/AboutScreen'
+import { CartBar } from './guest/CartBar'
+import { CartScreen } from './guest/CartScreen'
 import { DishSheet } from './guest/DishSheet'
 import { Header } from './guest/Header'
 import { MenuScreen } from './guest/MenuScreen'
@@ -10,7 +12,7 @@ import { useMe } from './guest/useMe'
 import { useMenu } from './guest/useMenu'
 import { platform } from './platform'
 
-type Screen = 'menu' | 'about' | 'staff'
+type Screen = 'menu' | 'about' | 'staff' | 'cart'
 
 const StaffApp = lazy(() => import('./staff/StaffApp'))
 
@@ -41,6 +43,7 @@ export default function App() {
       </Suspense>
     )
   }
+  if (screen === 'cart') return <CartScreen onBack={openMenu} />
   if (screen === 'about') {
     return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
   }
@@ -54,6 +57,7 @@ export default function App() {
       <main>
         <MenuScreen menu={menu} onRetry={reloadMenu} onOpenDish={setOpenDish} />
       </main>
+      {!openDish && <CartBar onOpen={() => setScreen('cart')} />}
       {openDish && <DishSheet dish={openDish} onClose={closeDish} />}
     </div>
   )

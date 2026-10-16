@@ -7,6 +7,10 @@ import {
   isThemeParamsDark,
   miniAppReady,
   mountBackButton,
+  mountMainButton,
+  offMainButtonClick,
+  onMainButtonClick,
+  setMainButtonParams,
   mountMiniAppSync,
   mountThemeParamsSync,
   onBackButtonClick,
@@ -22,14 +26,20 @@ import {
 import { mockTelegramClientInDev } from './devTelegramMock'
 import type { Platform, PlatformUser } from './types'
 
+// A plain browser tab with mocked launch data has no Telegram UI to draw buttons in.
+let mocked = false
+
 type Hex = `#${string}`
 
 export const telegramPlatform: Platform = {
   name: 'telegram',
   hasNativeBackButton: true,
+  get hasNativeMainButton() {
+    return !mocked && setMainButtonParams.isAvailable()
+  },
 
   init() {
-    if (import.meta.env.DEV) mockTelegramClientInDev()
+    if (import.meta.env.DEV) mocked = mockTelegramClientInDev()
     init()
     // Expose the user's Telegram theme as --tg-theme-* CSS variables.
     if (mountThemeParamsSync.isAvailable()) {
@@ -38,6 +48,7 @@ export const telegramPlatform: Platform = {
     }
     if (mountMiniAppSync.isAvailable()) mountMiniAppSync()
     if (mountBackButton.isAvailable()) mountBackButton()
+    if (mountMainButton.isAvailable()) mountMainButton()
     if (miniAppReady.isAvailable()) miniAppReady()
   },
 
@@ -60,6 +71,23 @@ export const telegramPlatform: Platform = {
     const color = background as Hex
     if (setMiniAppHeaderColor.isAvailable()) setMiniAppHeaderColor(color)
     if (setMiniAppBackgroundColor.isAvailable()) setMiniAppBackgroundColor(color)
+  },
+
+  showMainButton({ text, enabled, loading, color, textColor, onClick }) {
+    if (!setMainButtonParams.isAvailable()) return () => {}
+    setMainButtonParams({
+      text,
+      isVisible: true,
+      isEnabled: enabled,
+      isLoaderVisible: loading,
+      backgroundColor: color as `#${string}`,
+      textColor: textColor as `#${string}`,
+    })
+    onMainButtonClick(onClick)
+    return () => {
+      offMainButtonClick(onClick)
+      setMainButtonParams({ isVisible: false, isLoaderVisible: false })
+    }
   },
 
   showBackButton(onBack) {

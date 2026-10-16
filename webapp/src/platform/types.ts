@@ -11,6 +11,15 @@ export interface PlatformUser {
  * Everything the app needs from the host messenger.
  * Telegram today; MAX later gets its own implementation of the same interface.
  */
+export interface MainButtonParams {
+  text: string
+  enabled: boolean
+  loading: boolean
+  color: string
+  textColor: string
+  onClick: () => void
+}
+
 export interface Platform {
   readonly name: PlatformName
   init(): void
@@ -21,6 +30,10 @@ export interface Platform {
   isDark(): boolean
   /** Paint the messenger's header and background to match the screen. */
   setColors(background: string): void
+  /** Whether the messenger draws the main action button; otherwise screens show their own. */
+  readonly hasNativeMainButton: boolean
+  /** Show the native main button (EXPERIENCE.md › «Основное действие»); returns hide. */
+  showMainButton(params: MainButtonParams): () => void
   /** Whether the messenger draws its own back button; otherwise screens show one. */
   readonly hasNativeBackButton: boolean
   /** Show the native back button; the returned function hides it again. */

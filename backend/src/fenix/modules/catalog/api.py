@@ -22,7 +22,7 @@ from fenix.modules.catalog.menu import MenuCategory, MenuDish
 from fenix.modules.catalog.models import Category, Dish
 from fenix.modules.catalog.modifier_editor import GroupInput, GroupLinks, OptionInput
 from fenix.modules.catalog.photos import MAX_UPLOAD_BYTES as MAX_PHOTO_BYTES
-from fenix.modules.catalog.pricing import InvalidSelectionError, MissingGroup, Price
+from fenix.modules.catalog.pricing import InvalidSelectionError, MissingGroup, Price, Quote
 from fenix.modules.catalog.stop_list import StopDish, StopGroup, StopItem
 
 __all__ = [
@@ -40,6 +40,7 @@ __all__ = [
     "ModifierOption",
     "OptionInput",
     "Price",
+    "Quote",
     "SizeInput",
     "SizeOption",
     "StaffCategory",
@@ -61,6 +62,7 @@ __all__ = [
     "list_groups",
     "prepare_dish_photo",
     "price",
+    "quote",
     "reorder_categories",
     "reorder_dishes",
     "seed_menu",
@@ -300,4 +302,25 @@ async def set_stopped(
     """Take a size or a modifier off sale (or back). Idempotent."""
     await stop_list.set_stopped(
         session, location_id, size_id=size_id, modifier_id=modifier_id, stopped=stopped
+    )
+
+
+async def quote(
+    session: AsyncSession,
+    *,
+    location_id: uuid.UUID,
+    dish_id: uuid.UUID,
+    size_id: uuid.UUID,
+    modifier_ids: list[uuid.UUID],
+    quantity: int,
+) -> Quote:
+    """`price` plus display names; an unorderable selection gives `problem` instead of
+    raising, and a deleted dish gives empty names."""
+    return await pricing.quote(
+        session,
+        location_id=location_id,
+        dish_id=dish_id,
+        size_id=size_id,
+        modifier_ids=modifier_ids,
+        quantity=quantity,
     )

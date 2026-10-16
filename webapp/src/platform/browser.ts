@@ -4,6 +4,8 @@ import type { Platform } from './types'
 export const browserPlatform: Platform = {
   name: 'browser',
   hasNativeBackButton: false,
+  hasNativeMainButton: false,
+  showMainButton: () => () => {},
   init() {},
   getUser: () => null,
   getInitDataRaw: () => null,

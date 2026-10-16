@@ -21,6 +21,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cart */
+        get: operations["get_cart_api_v1_cart_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Item */
+        post: operations["add_item_api_v1_cart_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cart/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Item */
+        delete: operations["remove_item_api_v1_cart_items__item_id__delete"];
+        options?: never;
+        head?: never;
+        /** Set Quantity */
+        patch: operations["set_quantity_api_v1_cart_items__item_id__patch"];
+        trace?: never;
+    };
     "/api/v1/location": {
         parameters: {
             query?: never;
@@ -423,6 +475,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddIn */
+        AddIn: {
+            /**
+             * Dish Id
+             * Format: uuid
+             */
+            dish_id: string;
+            /** Modifier Ids */
+            modifier_ids?: string[];
+            /** Quantity */
+            quantity: number;
+            /**
+             * Size Id
+             * Format: uuid
+             */
+            size_id: string;
+        };
         /** Body_add_photo_api_v1_staff_location_photos_post */
         Body_add_photo_api_v1_staff_location_photos_post: {
             /** File */
@@ -432,6 +501,50 @@ export interface components {
         Body_upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post: {
             /** File */
             file: string;
+        };
+        /** CartLineOut */
+        CartLineOut: {
+            /** Available */
+            available: boolean;
+            /**
+             * Dish Id
+             * Format: uuid
+             */
+            dish_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Modifier Names */
+            modifier_names: string[];
+            /** Photo Url */
+            photo_url: string | null;
+            /** Problem */
+            problem: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Title */
+            title: string;
+            /** Total Price */
+            total_price: number | null;
+            /**
+             * Unit Price
+             * @description Kopecks; null when the line cannot be ordered
+             */
+            unit_price: number | null;
+        };
+        /** CartOut */
+        CartOut: {
+            /** Count */
+            count: number;
+            /** Lines */
+            lines: components["schemas"]["CartLineOut"][];
+            /**
+             * Total
+             * @description Kopecks of the lines that can be ordered
+             */
+            total: number;
         };
         /** CategoryIn */
         CategoryIn: {
@@ -862,6 +975,14 @@ export interface components {
              */
             unit_price: number;
         };
+        /** QuantityIn */
+        QuantityIn: {
+            /**
+             * Quantity
+             * @description 0 removes the line
+             */
+            quantity: number;
+        };
         /** SizeIn */
         SizeIn: {
             /** Id */
@@ -1096,6 +1217,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_cart_api_v1_cart_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_item_api_v1_cart_items_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_item_api_v1_cart_items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_quantity_api_v1_cart_items__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuantityIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
