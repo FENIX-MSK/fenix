@@ -8,6 +8,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
+from fenix.http.auth import current_user
 from fenix.http.openapi import build_schema
 from fenix.http.router import api_v1
 from fenix.main import create_app
@@ -49,7 +50,10 @@ def app() -> Iterator[FastAPI]:
     before = list(api_v1.routes)
     api_v1.include_router(probe)
     try:
-        yield create_app(Settings())
+        app = create_app(Settings())
+        # The error contract is independent of who is calling; auth has its own tests.
+        app.dependency_overrides[current_user] = lambda: None
+        yield app
     finally:
         api_v1.routes[:] = before
 

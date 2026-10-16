@@ -9,3 +9,12 @@
 - source_spec: `docs/implementation-artifacts/spec-1-1-module-skeleton.md`
   summary: Не сбрасывать накопившиеся обновления Telegram при рестарте бота (`delete_webhook(drop_pending_updates=True)` в `telegram/polling.py`).
   evidence: Polling теперь единственный режим и в продакшене; сообщения гостей, пришедшие во время рестарта сервиса `bot`, теряются.
+- source_spec: `docs/implementation-artifacts/spec-1-3-location-hours-and-info.md`
+  summary: Применять смену темы Telegram во время работы Mini App (событие `theme_changed`).
+  evidence: Тема читается один раз при запуске в `App.tsx` (`useTheme`).
+- source_spec: `docs/implementation-artifacts/spec-1-3-location-hours-and-info.md`
+  summary: Проверять IANA-пояс и часы работы при редактировании точки (история 2.7).
+  evidence: `ZoneInfo` с неверным именем бросает исключение, и `/api/v1/location` ответит 500.
+- source_spec: `docs/implementation-artifacts/spec-1-5-guest-browses-menu.md`
+  summary: Добавить тестовый раннер Mini App (например, Vitest + Testing Library) и покрыть карточку блюда, «Закончилось» и форматирование цены.
+  evidence: Поведение экрана меню проверено только вручную в браузере; в `webapp` нет тестов.

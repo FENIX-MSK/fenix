@@ -3,6 +3,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.types import MenuButtonWebApp, WebAppInfo
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from fenix.platform.config import Settings
 from fenix.telegram.handlers import start
@@ -17,8 +18,11 @@ def create_bot(settings: Settings) -> Bot:
     )
 
 
-def create_dispatcher(settings: Settings) -> Dispatcher:
-    dispatcher = Dispatcher(settings=settings)
+def create_dispatcher(
+    settings: Settings, session_factory: async_sessionmaker[AsyncSession]
+) -> Dispatcher:
+    # Workflow data: handlers receive these by parameter name.
+    dispatcher = Dispatcher(settings=settings, session_factory=session_factory)
     dispatcher.include_router(start.create_router())
     return dispatcher
 
