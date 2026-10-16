@@ -1000,3 +1000,58 @@ a {
     transition: none;
   }
 }
+
+.hours-edit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.hours-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.hours-inputs input {
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.photo-strip {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+.photo-strip img,
+.photo-thumb img {
+  flex: none;
+  width: 140px;
+  height: 100px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.photo-thumb {
+  position: relative;
+  flex: none;
+}
+
+.photo-thumb .icon-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--surface);
+}
+
+.about-photos {
+  margin: var(--space-3) 0;
+}

@@ -262,6 +262,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Location */
+        put: operations["update_location_api_v1_staff_location_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/location/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Photo */
+        post: operations["add_photo_api_v1_staff_location_photos_post"];
+        /** Remove Photo */
+        delete: operations["remove_photo_api_v1_staff_location_photos_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/me": {
         parameters: {
             query?: never;
@@ -388,6 +423,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Body_add_photo_api_v1_staff_location_photos_post */
+        Body_add_photo_api_v1_staff_location_photos_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post */
         Body_upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post: {
             /** File */
@@ -527,6 +567,24 @@ export interface components {
              */
             status: "ok";
         };
+        /** HoursIn */
+        HoursIn: {
+            /**
+             * Closes At
+             * @description H:MM; not after opens_at means past midnight
+             */
+            closes_at: string;
+            /**
+             * Opens At
+             * @description H:MM
+             */
+            opens_at: string;
+            /**
+             * Weekday
+             * @description 0 = Monday
+             */
+            weekday: number;
+        };
         /** InvitationOut */
         InvitationOut: {
             /**
@@ -544,6 +602,26 @@ export interface components {
             /** Dish Ids */
             dish_ids?: string[];
         };
+        /** LocationIn */
+        LocationIn: {
+            /** Address */
+            address: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
+            /** Opening Hours */
+            opening_hours: components["schemas"]["HoursIn"][];
+            /** Phone */
+            phone: string;
+            /** Social Links */
+            social_links?: components["schemas"]["SocialLinkIn"][];
+        };
         /** LocationOut */
         LocationOut: {
             /** Address */
@@ -558,6 +636,11 @@ export interface components {
             opening_hours: components["schemas"]["OpeningHoursOut"][];
             /** Phone */
             phone: string;
+            /**
+             * Photos
+             * @description Cafe photo URLs under /media/
+             */
+            photos: string[];
             /** Social Links */
             social_links: components["schemas"]["SocialLinkOut"][];
             status: components["schemas"]["OpeningStatusOut"];
@@ -737,6 +820,11 @@ export interface components {
             /** Photo Url */
             photo_url: string;
         };
+        /** PhotosOut */
+        PhotosOut: {
+            /** Photos */
+            photos: string[];
+        };
         /** PriceIn */
         PriceIn: {
             /**
@@ -812,6 +900,18 @@ export interface components {
              * @description Kopecks
              */
             price: number;
+        };
+        /** SocialLinkIn */
+        SocialLinkIn: {
+            /**
+             * Kind
+             * @default link
+             */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
         };
         /** SocialLinkOut */
         SocialLinkOut: {
@@ -1704,6 +1804,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvitationOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_location_api_v1_staff_location_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_photo_api_v1_staff_location_photos_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_add_photo_api_v1_staff_location_photos_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotosOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_photo_api_v1_staff_location_photos_delete: {
+        parameters: {
+            query: {
+                key: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotosOut"];
                 };
             };
             /** @description Client error */

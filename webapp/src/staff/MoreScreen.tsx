@@ -1,8 +1,12 @@
+import { CafeScreen } from './CafeScreen'
 import { StaffMembersScreen } from './StaffMembersScreen'
 
-export type MoreSection = 'members'
+export type MoreSection = 'cafe' | 'members'
 
-const SECTIONS: { id: MoreSection; label: string }[] = [{ id: 'members', label: 'Сотрудники' }]
+const SECTIONS: { id: MoreSection; label: string }[] = [
+  { id: 'cafe', label: 'Кафе: часы, контакты, фото' },
+  { id: 'members', label: 'Сотрудники' },
+]
 
 interface Props {
   section: MoreSection | null
@@ -11,6 +15,7 @@ interface Props {
 
 export function MoreScreen({ section, onOpen }: Props) {
   if (section === 'members') return <StaffMembersScreen />
+  if (section === 'cafe') return <CafeScreen />
   return (
     <>
       <h1 className="title staff-title">Ещё</h1>

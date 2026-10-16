@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { api } from '../../api/client'
-import { platform } from '../../platform'
-
-const MAX_BYTES = 15 * 1024 * 1024
+import { MAX_PHOTO_BYTES, PHOTO_MESSAGES, uploadPhoto } from '../photoUpload'
 
 type Upload = { kind: 'idle' } | { kind: 'uploading'; progress: number; preview: string } | { kind: 'failed'; file: File; message: string }
 
@@ -11,31 +9,6 @@ interface Props {
   dishId: string
   photoUrl: string | null
   onChanged: (photoUrl: string | null) => void
-}
-
-/** XHR rather than fetch: upload progress (EXPERIENCE.md › «Загрузка фото»). */
-function uploadPhoto(dishId: string, file: File, onProgress: (share: number) => void): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest()
-    request.open('POST', `/api/v1/staff/dishes/${dishId}/photo`)
-    const initData = platform.getInitDataRaw()
-    if (initData) request.setRequestHeader('Authorization', `tma ${initData}`)
-    request.upload.onprogress = (event) => event.lengthComputable && onProgress(event.loaded / event.total)
-    request.onload = () => {
-      const body = JSON.parse(request.responseText || 'null')
-      if (request.status === 200) resolve(body.photo_url)
-      else reject(new Error(body?.error?.code ?? 'failed'))
-    }
-    request.onerror = () => reject(new Error('network'))
-    const form = new FormData()
-    form.append('file', file)
-    request.send(form)
-  })
-}
-
-const MESSAGES: Record<string, string> = {
-  unsupported_image: 'Нужна фотография JPEG, PNG, WebP или HEIC',
-  image_too_large: 'Фото больше 15 МБ',
 }
 
 export function PhotoField({ dishId, photoUrl, onChanged }: Props) {
@@ -50,17 +23,20 @@ export function PhotoField({ dishId, photoUrl, onChanged }: Props) {
   )
 
   const send = async (file: File) => {
-    if (file.size > MAX_BYTES) return setUpload({ kind: 'failed', file, message: MESSAGES.image_too_large })
+    if (file.size > MAX_PHOTO_BYTES) return setUpload({ kind: 'failed', file, message: PHOTO_MESSAGES.image_too_large })
     const preview = URL.createObjectURL(file)
     setUpload({ kind: 'uploading', progress: 0, preview })
     try {
-      const url = await uploadPhoto(dishId, file, (progress) => setUpload({ kind: 'uploading', progress, preview }))
+      const body = (await uploadPhoto(`/api/v1/staff/dishes/${dishId}/photo`, file, (progress) =>
+        setUpload({ kind: 'uploading', progress, preview }),
+      )) as { photo_url: string }
+      const url = body.photo_url
       setUpload({ kind: 'idle' })
       onChanged(url)
     } catch (error) {
       // The old photo stays until a new one is stored.
       const code = error instanceof Error ? error.message : ''
-      setUpload({ kind: 'failed', file, message: MESSAGES[code] ?? 'Не удалось загрузить фото' })
+      setUpload({ kind: 'failed', file, message: PHOTO_MESSAGES[code] ?? 'Не удалось загрузить фото' })
     }
   }
 

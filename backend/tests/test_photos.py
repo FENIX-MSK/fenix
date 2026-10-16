@@ -11,8 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from fenix.main import create_app
 from fenix.modules.catalog.editor import CatalogEditError
-from fenix.modules.catalog.photos import MAX_SIDE, TARGET_BYTES, shrink
+from fenix.modules.catalog.photos import shrink
 from fenix.platform.config import Settings
+from fenix.platform.images import MAX_SIDE, TARGET_BYTES
 
 
 def encoded(fmt: str, size: tuple[int, int], mode: str = "RGB", **save: Any) -> bytes:
