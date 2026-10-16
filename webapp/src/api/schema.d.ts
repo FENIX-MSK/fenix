@@ -73,6 +73,23 @@ export interface paths {
         patch: operations["set_quantity_api_v1_cart_items__item_id__patch"];
         trace?: never;
     };
+    "/api/v1/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Checkout */
+        get: operations["get_checkout_api_v1_checkout_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/location": {
         parameters: {
             query?: never;
@@ -101,6 +118,23 @@ export interface paths {
         get: operations["me_api_v1_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Contact */
+        post: operations["update_contact_api_v1_me_contact_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -560,6 +594,46 @@ export interface components {
             is_hidden: boolean;
             /** Name */
             name: string;
+        };
+        /** CheckoutOut */
+        CheckoutOut: {
+            /**
+             * Asap Minutes
+             * @description «Как можно скорее (≈N мин)»
+             */
+            asap_minutes: number;
+            contact: components["schemas"]["ContactOut"];
+            /** Fulfilment */
+            fulfilment: "pickup"[];
+            /** Is Open */
+            is_open: boolean;
+            /** Payment Methods */
+            payment_methods: ("online" | "cash" | "card")[];
+            /** Status Text */
+            status_text: string;
+        };
+        /** ContactIn */
+        ContactIn: {
+            /**
+             * Consent
+             * @default false
+             */
+            consent: boolean;
+            /** Contact Raw */
+            contact_raw?: string | null;
+            /** First Name */
+            first_name?: string | null;
+            /** Phone */
+            phone?: string | null;
+        };
+        /** ContactOut */
+        ContactOut: {
+            /** First Name */
+            first_name: string;
+            /** Has Consent */
+            has_consent: boolean;
+            /** Phone */
+            phone: string | null;
         };
         /** CreatedOut */
         CreatedOut: {
@@ -1393,6 +1467,46 @@ export interface operations {
             };
         };
     };
+    get_checkout_api_v1_checkout_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_location_api_v1_location_get: {
         parameters: {
             query?: never;
@@ -1451,6 +1565,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_contact_api_v1_me_contact_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
                 };
             };
             /** @description Client error */

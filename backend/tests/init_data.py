@@ -30,3 +30,15 @@ def sign_init_data(
     secret_key = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
     fields["hash"] = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     return urlencode(fields)
+
+
+def sign_contact(user_id: int, phone: str, token: str = TEST_BOT_TOKEN) -> str:
+    """A `requestContact` response as Telegram signs it."""
+    fields = {
+        "auth_date": str(int(time.time())),
+        "contact": json.dumps({"user_id": user_id, "phone_number": phone, "first_name": "Аня"}),
+    }
+    data_check_string = "\n".join(f"{key}={fields[key]}" for key in sorted(fields))
+    secret_key = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
+    fields["hash"] = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    return urlencode(fields)

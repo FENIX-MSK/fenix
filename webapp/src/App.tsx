@@ -4,6 +4,7 @@ import type { MenuDish } from './api/types'
 import { AboutScreen } from './guest/AboutScreen'
 import { CartBar } from './guest/CartBar'
 import { CartScreen } from './guest/CartScreen'
+import { CheckoutScreen } from './guest/CheckoutScreen'
 import { DishSheet } from './guest/DishSheet'
 import { Header } from './guest/Header'
 import { MenuScreen } from './guest/MenuScreen'
@@ -12,7 +13,7 @@ import { useMe } from './guest/useMe'
 import { useMenu } from './guest/useMenu'
 import { platform } from './platform'
 
-type Screen = 'menu' | 'about' | 'staff' | 'cart'
+type Screen = 'menu' | 'about' | 'staff' | 'cart' | 'checkout'
 
 const StaffApp = lazy(() => import('./staff/StaffApp'))
 
@@ -43,7 +44,8 @@ export default function App() {
       </Suspense>
     )
   }
-  if (screen === 'cart') return <CartScreen onBack={openMenu} />
+  if (screen === 'cart') return <CartScreen onBack={openMenu} onCheckout={() => setScreen('checkout')} />
+  if (screen === 'checkout') return <CheckoutScreen onBack={() => setScreen('cart')} />
   if (screen === 'about') {
     return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
   }

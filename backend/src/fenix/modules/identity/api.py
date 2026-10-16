@@ -8,7 +8,8 @@ from enum import StrEnum
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.identity import service, staff
+from fenix.modules.identity import contact, service, staff
+from fenix.modules.identity.contact import Contact, ContactError
 from fenix.modules.identity.models import IdentityUser
 from fenix.modules.identity.staff import (
     INVITATION_PREFIX,
@@ -20,6 +21,8 @@ from fenix.modules.identity.staff import (
 __all__ = [
     "INVITATION_PREFIX",
     "INVITATION_TTL",
+    "Contact",
+    "ContactError",
     "LastStaffMemberError",
     "Platform",
     "StaffMember",
@@ -32,10 +35,12 @@ __all__ = [
     "ensure_user",
     "find_user",
     "find_user_by_username",
+    "get_contact",
     "grant_staff",
     "is_staff",
     "list_staff",
     "remove_staff_membership",
+    "update_contact",
 ]
 
 
@@ -174,3 +179,29 @@ async def remove_staff_membership(
 ) -> None:
     """Delete the membership row entirely, leaving no trace in the staff list."""
     await staff.remove_member(session, user_id, location_id)
+
+
+async def get_contact(session: AsyncSession, user_id: uuid.UUID) -> Contact:
+    return await contact.get(session, user_id)
+
+
+async def update_contact(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    first_name: str | None = None,
+    phone: str | None = None,
+    phone_verified: bool = False,
+    consent: bool = False,
+    now: datetime,
+) -> Contact:
+    """Raises ContactError: bad_phone, name_required. Consent is recorded once."""
+    return await contact.update(
+        session,
+        user_id,
+        first_name=first_name,
+        phone=phone,
+        phone_verified=phone_verified,
+        consent=consent,
+        now=now,
+    )

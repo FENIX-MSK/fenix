@@ -21,3 +21,6 @@
 - source_spec: `docs/implementation-artifacts/spec-2-5-dish-photos-garage.md`
   summary: Периодически удалять из бакета `media` объекты, на которые не ссылается ни одно блюдо или фото кафе.
   evidence: При замене фото старый объект остаётся (ключи неизменяемы, удаление до коммита небезопасно).
+- source_spec: `docs/implementation-artifacts/spec-3-2-checkout-contacts-consent.md`
+  summary: Добавить ссылку на политику конфиденциальности к согласию на оформлении.
+  evidence: Текст политики готовит заказчик (PRD §11, открытый вопрос 1); пока согласие без ссылки.

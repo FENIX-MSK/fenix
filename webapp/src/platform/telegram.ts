@@ -16,6 +16,7 @@ import {
   onBackButtonClick,
   openLink,
   openTelegramLink,
+  requestContactComplete,
   retrieveLaunchParams,
   retrieveRawInitData,
   setMiniAppBackgroundColor,
@@ -105,6 +106,15 @@ export const telegramPlatform: Platform = {
       if (hapticFeedbackSelectionChanged.isAvailable()) hapticFeedbackSelectionChanged()
     } else if (hapticFeedbackNotificationOccurred.isAvailable()) {
       hapticFeedbackNotificationOccurred(kind)
+    }
+  },
+
+  async requestContact() {
+    if (mocked || !requestContactComplete.isAvailable()) return null
+    try {
+      return (await requestContactComplete()).raw
+    } catch {
+      return null
     }
   },
 
