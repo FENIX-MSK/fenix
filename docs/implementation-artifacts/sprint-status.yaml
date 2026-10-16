@@ -1,0 +1,97 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 10-16-2026 16:52
+last_updated: 10-16-2026 16:55
+project: fenix
+project_key: NOKEY
+tracking_system: file-system
+story_location: docs/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-модульный-каркас-бэкенда-и-контракт-api: ready-for-dev
+  1-2-гость-авторизуется-в-mini-app-и-запоминается-с-источником: backlog
+  1-3-точка-часы-работы-и-информация-о-кафе: backlog
+  1-4-каталог-и-наполнение-меню-из-pdf: backlog
+  1-5-гость-листает-меню: backlog
+  1-6-карточка-блюда-с-размерами-и-модификаторами: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-первый-сотрудник-и-приглашение-по-ссылке: backlog
+  2-2-список-и-отключение-сотрудников: backlog
+  2-3-редактор-категорий-блюд-и-размеров: backlog
+  2-4-редактор-групп-модификаторов: backlog
+  2-5-фото-блюд-в-хранилище-garage: backlog
+  2-6-стоп-лист: backlog
+  2-7-часы-работы-и-информация-о-кафе: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-корзина: backlog
+  3-2-оформление-самовывоза-контакты-и-согласие: backlog
+  3-3-создание-заказа-с-оплатой-на-месте: backlog
+  3-4-уведомления-гостю-через-outbox: backlog
+  3-5-тестовая-онлайн-оплата-и-автоотмена: backlog
+  3-6-служебный-чат-и-уведомления-персоналу: backlog
+  3-7-доска-заказов-в-реальном-времени: backlog
+  3-8-ведение-заказа-по-статусам-и-оплата-на-месте: backlog
+  3-9-отмена-заказа-и-возврат: backlog
+  3-10-статус-заказа-у-гостя-в-реальном-времени: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-история-заказов: backlog
+  4-2-повтор-заказа: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-параметры-заказа-в-настройках: backlog
+  5-2-оформление-доставки-по-жк: backlog
+  5-3-доставка-передача-курьеру-и-вручение: backlog
+  5-4-предзаказ-на-время-сегодня: backlog
+  5-5-запланированные-заказы-на-доске: backlog
+  5-6-приостановка-приёма-заказов-и-доставки: backlog
+  5-7-загруженность-кухни-и-время-ожидания: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-управление-акциями: backlog
+  6-2-акционные-цены-в-меню-и-корзине: backlog
+  6-3-скидка-с-проверкой-при-оформлении: backlog
+  6-4-подтверждение-скидки-при-выдаче: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-отчёт-по-продажам: backlog
+  7-2-алерты-и-дашборды: backlog
+  7-3-проверка-под-нагрузкой: backlog
+  7-4-готовность-к-запуску-для-гостей: backlog
+  epic-7-retrospective: optional
