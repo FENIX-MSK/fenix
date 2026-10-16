@@ -1,0 +1,60 @@
+[project]
+name = "fenix"
+version = "0.1.0"
+description = "Fenix backend: API, Telegram bot and background worker"
+authors = [
+    { name = "d.s.derendyaev", email = "dds_stalker@mail.ru" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "aiogram>=3.31.0",
+    "alembic>=1.20.0",
+    "asyncpg>=0.32.0",
+    "fastapi>=0.143.2",
+    "prometheus-fastapi-instrumentator>=8.1.0",
+    "pydantic-settings>=2.16.0",
+    "redis>=8.1.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "structlog>=26.1.0",
+    "taskiq>=0.13.0",
+    "taskiq-redis>=1.2.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+fenix-bot-polling = "fenix.telegram.polling:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "ASYNC", "S", "SIM", "RUF"]
+ignore = ["RUF001"]  # Cyrillic text in user-facing strings is intentional
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"migrations/**" = ["I"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+packages = ["fenix"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

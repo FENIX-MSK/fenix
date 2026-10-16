@@ -1,0 +1,6 @@
+# Context is the repo root: send only what the web image needs.
+*
+!webapp
+!infra/caddy
+webapp/node_modules
+webapp/dist
