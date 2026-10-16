@@ -10,20 +10,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fenix.modules.identity import service, staff
 from fenix.modules.identity.models import IdentityUser
-from fenix.modules.identity.staff import INVITATION_PREFIX, INVITATION_TTL
+from fenix.modules.identity.staff import (
+    INVITATION_PREFIX,
+    INVITATION_TTL,
+    LastStaffMemberError,
+    StaffMemberNotFoundError,
+)
 
 __all__ = [
     "INVITATION_PREFIX",
     "INVITATION_TTL",
+    "LastStaffMemberError",
     "Platform",
+    "StaffMember",
+    "StaffMemberNotFoundError",
     "User",
     "accept_invitation",
     "bootstrap_first_staff",
     "create_invitation",
+    "disable_staff",
     "ensure_user",
     "find_user",
     "find_user_by_username",
     "is_staff",
+    "list_staff",
 ]
 
 
@@ -41,6 +51,15 @@ class User:
     last_name: str | None
     username: str | None
     source: str
+
+
+@dataclass(frozen=True, slots=True)
+class StaffMember:
+    user_id: uuid.UUID
+    first_name: str
+    last_name: str | None
+    username: str | None
+    since: datetime
 
 
 async def ensure_user(
@@ -120,3 +139,24 @@ async def create_invitation(
 async def accept_invitation(session: AsyncSession, token: str, user_id: uuid.UUID) -> bool:
     """Redeem an invitation; False when it is unknown, used or expired."""
     return await staff.accept_invitation(session, token, user_id)
+
+
+async def list_staff(session: AsyncSession, location_id: uuid.UUID) -> list[StaffMember]:
+    """Active staff of the location, oldest first."""
+    return [
+        StaffMember(
+            user_id=m.user_id,
+            first_name=m.user.first_name,
+            last_name=m.user.last_name,
+            username=m.user.username,
+            since=m.created_at,
+        )
+        for m in await staff.list_staff(session, location_id)
+    ]
+
+
+async def disable_staff(
+    session: AsyncSession, location_id: uuid.UUID, user_id: uuid.UUID, now: datetime
+) -> None:
+    """Revoke access at once. Raises StaffMemberNotFoundError, LastStaffMemberError."""
+    await staff.disable_staff(session, location_id, user_id, now)

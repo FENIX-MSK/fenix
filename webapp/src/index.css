@@ -734,3 +734,25 @@ a {
   color: var(--accent);
   font-weight: 600;
 }
+
+.member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.list .member:last-child {
+  border-bottom: 0;
+}
+
+.member-name {
+  font-weight: 600;
+}
+
+.secondary-button.danger {
+  border-color: var(--accent);
+  color: var(--accent);
+}

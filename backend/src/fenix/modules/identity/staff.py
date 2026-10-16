@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import contains_eager
 
 from fenix.modules.identity.models import IdentityUser, Invitation, StaffMembership
 
@@ -119,3 +120,50 @@ async def find_user_by_username(session: AsyncSession, username: str) -> Identit
         func.lower(IdentityUser.username) == username.lstrip("@").lower()
     )
     return (await session.execute(statement)).scalars().first()
+
+
+class LastStaffMemberError(Exception):
+    pass
+
+
+class StaffMemberNotFoundError(Exception):
+    pass
+
+
+async def list_staff(session: AsyncSession, location_id: uuid.UUID) -> list[StaffMembership]:
+    statement = (
+        select(StaffMembership)
+        .join(StaffMembership.user)
+        .where(StaffMembership.location_id == location_id, StaffMembership.is_active.is_(True))
+        .order_by(StaffMembership.created_at)
+        .options(contains_eager(StaffMembership.user))
+    )
+    return list((await session.execute(statement)).scalars())
+
+
+async def disable_staff(
+    session: AsyncSession, location_id: uuid.UUID, user_id: uuid.UUID, now: datetime
+) -> None:
+    # Same lock as bootstrap: two colleagues disabling each other cannot leave nobody.
+    await session.execute(select(func.pg_advisory_xact_lock(_lock_key(location_id))))
+    membership = (
+        await session.execute(
+            select(StaffMembership).where(
+                StaffMembership.location_id == location_id,
+                StaffMembership.user_id == user_id,
+                StaffMembership.is_active.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise StaffMemberNotFoundError
+    active = await session.execute(
+        select(func.count())
+        .select_from(StaffMembership)
+        .where(StaffMembership.location_id == location_id, StaffMembership.is_active.is_(True))
+    )
+    if active.scalar_one() <= 1:
+        raise LastStaffMemberError
+    membership.is_active = False
+    membership.disabled_at = now
+    await session.flush()
