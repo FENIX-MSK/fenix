@@ -1,5 +1,6 @@
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.types import MenuButtonWebApp, WebAppInfo
 
@@ -8,8 +9,10 @@ from fenix.telegram.handlers import start
 
 
 def create_bot(settings: Settings) -> Bot:
+    proxy = settings.telegram_proxy_url
     return Bot(
         token=settings.telegram_bot_token.get_secret_value(),
+        session=AiohttpSession(proxy=proxy.get_secret_value()) if proxy else None,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
