@@ -16,12 +16,24 @@ Telegram's test environment accepts plain-HTTP Mini App URLs, so locally
 
 ## Production (VPS)
 
-Stack: `compose.prod.yaml` — Caddy (HTTPS + Mini App static), API (bot webhook),
-worker, Postgres, Redis, MinIO, Prometheus, Loki, Alloy, Grafana (`/grafana`).
+Stack: `compose.prod.yaml` — Caddy (HTTPS + Mini App static), API, bot (polling),
+worker, tg-egress, Postgres, Redis, MinIO, Prometheus, Loki, Alloy, Grafana (`/grafana`).
+
+### Telegram egress
+
+The VPS cannot reach Telegram directly. `tg-egress` runs an AmneziaWG client and a
+SOCKS5 proxy (`socks5://tg-egress:1080`, internal network only); the backend sends
+Bot API calls through it via `TELEGRAM_PROXY_URL`. Only Telegram subnets are routed
+into the tunnel, everything else goes out directly.
+
+The tunnel config lives only on the server: `/opt/fenix/tg-egress/awg0.conf`
+(AmneziaWG 2.0 format, `AllowedIPs` = Telegram IPv4 ranges, no `DNS` line, no empty
+`I*` parameters). Never commit it.
 
 One-time server setup:
 
-1. Create `/opt/fenix` owned by the deploy user and put `.env` there
+1. Create `/opt/fenix` owned by the deploy user and put `.env` there, plus the tunnel
+   config at `/opt/fenix/tg-egress/awg0.conf` (mode 600)
    (template: `infra/.env.example`, generate passwords with `openssl rand -hex 24`).
 2. Add the CI deploy public key to the deploy user's `~/.ssh/authorized_keys`.
 3. In GitHub → Settings → Environments → `production`, add secrets

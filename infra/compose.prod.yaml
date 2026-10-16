@@ -8,6 +8,8 @@ x-backend: &backend
     ENVIRONMENT: production
     DATABASE_URL: postgresql+asyncpg://fenix:${POSTGRES_PASSWORD}@postgres:5432/fenix
     REDIS_URL: redis://redis:6379/0
+    # The VPS cannot reach Telegram directly; Bot API calls go through the tunnel.
+    TELEGRAM_PROXY_URL: socks5://tg-egress:1080
   restart: unless-stopped
   networks: [app]
 
@@ -29,13 +31,11 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  # TELEGRAM_BOT_MODE stays "polling" (the default) so the API never registers a
+  # webhook: updates are consumed by the "bot" service, and Telegram cannot
+  # reliably reach this VPS anyway.
   api:
     <<: *backend
-    environment:
-      ENVIRONMENT: production
-      DATABASE_URL: postgresql+asyncpg://fenix:${POSTGRES_PASSWORD}@postgres:5432/fenix
-      REDIS_URL: redis://redis:6379/0
-      TELEGRAM_BOT_MODE: webhook
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_started }
@@ -49,6 +49,22 @@ services:
     <<: *backend
     command: ["taskiq", "worker", "fenix.worker:broker"]
     depends_on: [redis, postgres]
+
+  bot:
+    <<: *backend
+    command: ["fenix-bot-polling"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      tg-egress: { condition: service_healthy }
+
+  tg-egress:
+    image: ghcr.io/fenix-msk/fenix-tg-egress:${IMAGE_TAG:-latest}
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    volumes:
+      - ./tg-egress/awg0.conf:/etc/amnezia/amneziawg/awg0.conf:ro
+    restart: unless-stopped
+    networks: [app]
 
   postgres:
     image: postgres:17-alpine

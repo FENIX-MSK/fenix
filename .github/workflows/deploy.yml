@@ -46,6 +46,15 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
+      - name: Build and push Telegram egress tunnel
+        uses: docker/build-push-action@v6
+        with:
+          context: infra/tg-egress
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/fenix-tg-egress:${{ env.IMAGE_TAG }},${{ env.IMAGE_PREFIX }}/fenix-tg-egress:latest
+          cache-from: type=gha,scope=tg-egress
+          cache-to: type=gha,mode=max,scope=tg-egress
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -63,7 +72,7 @@ jobs:
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
       - name: Upload stack definition
         run: |
-          rsync -az --delete --exclude .env --exclude .env.example \
+          rsync -az --delete --exclude .env --exclude .env.example --exclude tg-egress \
             infra/compose.prod.yaml infra/monitoring \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/fenix/"
       - name: Roll out
