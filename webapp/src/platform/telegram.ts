@@ -1,5 +1,7 @@
 import {
   bindThemeParamsCssVars,
+  hapticFeedbackNotificationOccurred,
+  hapticFeedbackSelectionChanged,
   hideBackButton,
   init,
   isThemeParamsDark,
@@ -66,6 +68,14 @@ export const telegramPlatform: Platform = {
     return () => {
       off()
       hideBackButton()
+    }
+  },
+
+  haptic(kind) {
+    if (kind === 'selection') {
+      if (hapticFeedbackSelectionChanged.isAvailable()) hapticFeedbackSelectionChanged()
+    } else if (hapticFeedbackNotificationOccurred.isAvailable()) {
+      hapticFeedbackNotificationOccurred(kind)
     }
   },
 

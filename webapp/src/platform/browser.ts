@@ -11,6 +11,7 @@ export const browserPlatform: Platform = {
   setColors() {},
   // The browser's own back is the fallback; screens also offer an in-page back link.
   showBackButton: () => () => {},
+  haptic() {},
   openLink(url) {
     window.open(url, '_blank', 'noopener')
   },

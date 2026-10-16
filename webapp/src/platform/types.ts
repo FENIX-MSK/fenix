@@ -25,6 +25,8 @@ export interface Platform {
   readonly hasNativeBackButton: boolean
   /** Show the native back button; the returned function hides it again. */
   showBackButton(onBack: () => void): () => void
+  /** Short vibration: a choice made, a rejected action, a completed action. */
+  haptic(kind: 'selection' | 'error' | 'success'): void
   /** Open an external link (maps, social networks) outside the Mini App. */
   openLink(url: string): void
 }

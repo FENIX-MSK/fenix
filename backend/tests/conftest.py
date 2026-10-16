@@ -80,3 +80,17 @@ def auth_headers() -> dict[str, str]:
     from init_data import sign_init_data
 
     return {"Authorization": f"tma {sign_init_data()}"}
+
+
+@pytest.fixture
+async def seeded(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> async_sessionmaker[AsyncSession]:
+    """The default location and the printed menu."""
+    from fenix.modules.catalog import api as catalog
+    from fenix.modules.locations import api as locations
+
+    async with session_factory() as session, session.begin():
+        await locations.seed_defaults(session)
+        await catalog.seed_menu(session)
+    return session_factory

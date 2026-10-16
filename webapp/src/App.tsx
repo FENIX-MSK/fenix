@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { MenuDish } from './api/types'
 import { AboutScreen } from './guest/AboutScreen'
+import { DishSheet } from './guest/DishSheet'
 import { Header } from './guest/Header'
 import { MenuScreen } from './guest/MenuScreen'
 import { useLocationInfo } from './guest/useLocationInfo'
@@ -25,8 +26,8 @@ export default function App() {
   const { state: location, reload: reloadLocation } = useLocationInfo()
   const { state: menu, reload: reloadMenu } = useMenu()
   const openMenu = useCallback(() => setScreen('menu'), [])
-  // The dish sheet arrives with story 1.6.
-  const openDish = useCallback((_dish: MenuDish) => {}, [])
+  const [openDish, setOpenDish] = useState<MenuDish | null>(null)
+  const closeDish = useCallback(() => setOpenDish(null), [])
 
   if (screen === 'about') {
     return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
@@ -35,8 +36,9 @@ export default function App() {
     <div className="screen">
       <Header location={location} onAbout={() => setScreen('about')} />
       <main>
-        <MenuScreen menu={menu} onRetry={reloadMenu} onOpenDish={openDish} />
+        <MenuScreen menu={menu} onRetry={reloadMenu} onOpenDish={setOpenDish} />
       </main>
+      {openDish && <DishSheet dish={openDish} onClose={closeDish} />}
     </div>
   )
 }

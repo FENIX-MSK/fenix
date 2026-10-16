@@ -72,10 +72,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/menu/dishes/{dish_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dish */
+        get: operations["get_dish_api_v1_menu_dishes__dish_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/menu/price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Price */
+        post: operations["price_api_v1_menu_price_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** DishOut */
+        DishOut: {
+            /** Description */
+            description: string;
+            /** Groups */
+            groups: components["schemas"]["ModifierGroupOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Photo Url */
+            photo_url: string | null;
+            /** Portion */
+            portion: string | null;
+            /** Sizes */
+            sizes: components["schemas"]["SizeOut"][];
+        };
         /** ErrorBody */
         ErrorBody: {
             /**
@@ -180,6 +234,49 @@ export interface components {
             /** Categories */
             categories: components["schemas"]["MenuCategoryOut"][];
         };
+        /** MissingGroupOut */
+        MissingGroupOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** ModifierGroupOut */
+        ModifierGroupOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Choice */
+            max_choice: number;
+            /** Min Choice */
+            min_choice: number;
+            /** Modifiers */
+            modifiers: components["schemas"]["ModifierOut"][];
+            /** Name */
+            name: string;
+        };
+        /** ModifierOut */
+        ModifierOut: {
+            /** Available */
+            available: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Price Delta
+             * @description Kopecks added to the size price
+             */
+            price_delta: number;
+        };
         /** OpeningHoursOut */
         OpeningHoursOut: {
             /**
@@ -211,6 +308,65 @@ export interface components {
              * @description Ready to show, e.g. «Открыто до 22:00»
              */
             text: string;
+        };
+        /** PriceIn */
+        PriceIn: {
+            /**
+             * Dish Id
+             * Format: uuid
+             */
+            dish_id: string;
+            /** Modifier Ids */
+            modifier_ids?: string[];
+            /** Quantity */
+            quantity: number;
+            /**
+             * Size Id
+             * Format: uuid
+             */
+            size_id: string;
+        };
+        /** PriceOut */
+        PriceOut: {
+            /**
+             * Complete
+             * @description False while a required group is not chosen
+             */
+            complete: boolean;
+            /** Missing Groups */
+            missing_groups: components["schemas"]["MissingGroupOut"][];
+            /**
+             * Total Price
+             * @description Kopecks for the whole quantity
+             */
+            total_price: number;
+            /**
+             * Unit Price
+             * @description Kopecks for one item
+             */
+            unit_price: number;
+        };
+        /** SizeOut */
+        SizeOut: {
+            /** Available */
+            available: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Name
+             * @description Empty for a dish with a single price
+             */
+            name: string;
+            /** Portion */
+            portion: string | null;
+            /**
+             * Price
+             * @description Kopecks
+             */
+            price: number;
         };
         /** SocialLinkOut */
         SocialLinkOut: {
@@ -348,6 +504,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MenuOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_dish_api_v1_menu_dishes__dish_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dish_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DishOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    price_api_v1_menu_price_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceOut"];
                 };
             };
             /** @description Client error */
