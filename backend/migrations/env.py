@@ -4,14 +4,18 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy.engine import Connection
 
-from fenix.config import get_settings
-from fenix.db import Base, create_engine
+from fenix.platform.config import get_settings
+from fenix.platform.db import Base, create_engine
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import model modules here as they appear so autogenerate sees them.
+import fenix.modules.catalog.models  # noqa: E402
+import fenix.modules.identity.models  # noqa: E402
+import fenix.modules.locations.models  # noqa: F401, E402
+
 target_metadata = Base.metadata
 
 

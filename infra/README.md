@@ -43,5 +43,14 @@ Deploy: merge `develop` → `release`. CI builds `ghcr.io/fenix-msk/fenix-api` a
 `fenix-web`, uploads the stack definition to `/opt/fenix` and runs
 `docker compose up -d`. Migrations run in the one-shot `migrate` service before the API starts.
 
-Until a domain exists, `SITE_ADDRESS=84-54-56-12.sslip.io` gives a real
-Let's Encrypt certificate for the server IP.
+Public addresses are GitHub variables of the `production` environment; every deploy
+writes them into `/opt/fenix/.env`:
+
+- `SITE_ADDRESS` — what Caddy serves, e.g. `fenix.kitexp.ru, 84-54-56-12.sslip.io`
+  (each host gets its own Let's Encrypt certificate as soon as its DNS points here);
+- `SITE_DOMAIN` — the primary host (Grafana's public URL);
+- `WEBAPP_URL` — what the bot's «Открыть меню» buttons open.
+
+After the rollout the workflow runs `fenix-smoke "$WEBAPP_URL"` inside the API container:
+it walks the guest path through the public URL with launch data signed by the bot
+token and fails the deploy on any broken step.

@@ -1,0 +1,52 @@
+/* Design tokens from docs/planning-artifacts/ux-designs/ux-fenix-2026-10-16/DESIGN.md.
+   Light by default; html[data-theme='dark'] swaps every token for its -dark pair. */
+:root {
+  --bg: #f7efe3;
+  --surface: #ffffff;
+  --surface-sunken: #efe4d4;
+  --text: #3a0b0e;
+  --text-muted: #74574a;
+  --accent: #731419;
+  --on-accent: #f7efe3;
+  --gold: #b8894a;
+  --gold-text: #8a6430;
+  --line: #e2cfb6;
+  --error: #a01b1b;
+
+  --font-display: 'Tenor Sans', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --gutter: 16px;
+  --tap-min: 44px;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #2b0b0e;
+  --surface: #3e1216;
+  --surface-sunken: #220809;
+  --text: #f3e6d0;
+  --text-muted: #bfa088;
+  --accent: #d4a96a;
+  --on-accent: #2b0b0e;
+  --gold: #d4a96a;
+  --gold-text: #d4a96a;
+  --line: #5a2a28;
+  --error: #ff9a8a;
+
+  color-scheme: dark;
+}

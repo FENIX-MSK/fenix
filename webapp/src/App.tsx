@@ -1,27 +1,44 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { apiGet } from './api/client'
+import type { MenuDish } from './api/types'
+import { AboutScreen } from './guest/AboutScreen'
+import { DishSheet } from './guest/DishSheet'
+import { Header } from './guest/Header'
+import { MenuScreen } from './guest/MenuScreen'
+import { useLocationInfo } from './guest/useLocationInfo'
+import { useMenu } from './guest/useMenu'
 import { platform } from './platform'
 
-type ApiStatus = 'checking' | 'ok' | 'unavailable'
+type Screen = 'menu' | 'about'
+
+function useTheme() {
+  useEffect(() => {
+    const dark = platform.isDark()
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    // The messenger's header matches the screen background (EXPERIENCE.md › Responsive).
+    platform.setColors(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim())
+  }, [])
+}
 
 export default function App() {
-  const user = platform.getUser()
-  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking')
+  useTheme()
+  const [screen, setScreen] = useState<Screen>('menu')
+  const { state: location, reload: reloadLocation } = useLocationInfo()
+  const { state: menu, reload: reloadMenu } = useMenu()
+  const openMenu = useCallback(() => setScreen('menu'), [])
+  const [openDish, setOpenDish] = useState<MenuDish | null>(null)
+  const closeDish = useCallback(() => setOpenDish(null), [])
 
-  useEffect(() => {
-    apiGet<{ status: string }>('/health')
-      .then((body) => setApiStatus(body.status === 'ok' ? 'ok' : 'unavailable'))
-      .catch(() => setApiStatus('unavailable'))
-  }, [])
-
+  if (screen === 'about') {
+    return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
+  }
   return (
-    <main className="app">
-      <h1>Феникс бистро</h1>
-      <p>{user ? `Привет, ${user.firstName}!` : 'Откройте приложение из Telegram-бота.'}</p>
-      <p className="muted">
-        Платформа: {platform.name} · API: {apiStatus}
-      </p>
-    </main>
+    <div className="screen">
+      <Header location={location} onAbout={() => setScreen('about')} />
+      <main>
+        <MenuScreen menu={menu} onRetry={reloadMenu} onOpenDish={setOpenDish} />
+      </main>
+      {openDish && <DishSheet dish={openDish} onClose={closeDish} />}
+    </div>
   )
 }

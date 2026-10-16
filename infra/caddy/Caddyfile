@@ -4,9 +4,6 @@
 	handle /api/* {
 		reverse_proxy api:8000
 	}
-	handle /telegram/webhook {
-		reverse_proxy api:8000
-	}
 	handle /grafana* {
 		reverse_proxy grafana:3000
 	}

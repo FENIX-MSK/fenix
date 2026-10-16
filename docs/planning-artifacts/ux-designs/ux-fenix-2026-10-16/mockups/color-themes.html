@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Феникс — варианты палитры</title>
+<style>
+  /* Brand colors measured from the menu PDF: bordeaux #731419, gold #D4A96A */
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #ECE9E4; color: #222; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 24px; color: #555; max-width: 70ch; }
+  .variant { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .variant h2 { margin: 0 0 4px; font-size: 18px; }
+  .variant p.reg { margin: 0 0 12px; color: #555; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #333; background: #F4F2EF; border-radius: 999px; padding: 4px 10px 4px 4px; }
+  .sw { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+  .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .mode-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #777; margin-bottom: 6px; }
+  .phone { border-radius: 20px; overflow: hidden; padding: 16px; min-height: 360px; position: relative; background: var(--bg); color: var(--text); }
+  .title { font-family: "Didot", "Bodoni 72", Georgia, serif; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); font-size: 22px; margin: 0 0 2px; }
+  .status { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .cats { display: flex; gap: 8px; margin-bottom: 14px; overflow: hidden; }
+  .cat { font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
+  .cat.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .card { display: flex; gap: 12px; padding: 10px; border-radius: 12px; background: var(--surface); margin-bottom: 10px; }
+  .ph { width: 64px; height: 64px; border-radius: 10px; background: var(--ph); flex: none; }
+  .card b { display: block; font-size: 15px; font-weight: 600; }
+  .card small { display: block; font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+  .price { font-weight: 600; color: var(--price); }
+  .sold { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+  .cart { position: absolute; left: 16px; right: 16px; bottom: 16px; border-radius: 12px; padding: 12px; text-align: center; font-weight: 600; background: var(--btn); color: var(--on-btn); }
+</style>
+</head>
+<body>
+<h1>Феникс бистро — варианты палитры для Mini App</h1>
+<p class="lead">Цвета взяты из PDF-меню: бордовый #731419 и золотой #D4A96A. Варианты отличаются тем, насколько приложение «как меню» и как оно ведёт себя в светлой теме Telegram. Шрифт заголовка здесь — временная замена; финальный подберём под шрифт меню.</p>
+
+<!-- Variant A: always brand dark, ignores Telegram theme. bg #731419, surface #5E1015, gold #D4A96A, text #F3E6D0, muted #C9A98C -->
+<section class="variant">
+  <h2>A. «Как в меню»</h2>
+  <p class="reg">Всегда бордовый фон и золото, независимо от темы Telegram. Максимально узнаваемо; в светлой теме Telegram приложение остаётся тёмным.</p>
+  <div class="chips">
+    <span class="chip"><span class="sw" style="background:#731419"></span>фон #731419</span>
+    <span class="chip"><span class="sw" style="background:#5E1015"></span>карточка #5E1015</span>
+    <span class="chip"><span class="sw" style="background:#D4A96A"></span>акцент #D4A96A</span>
+    <span class="chip"><span class="sw" style="background:#F3E6D0"></span>текст #F3E6D0</span>
+  </div>
+  <div class="modes">
+    <div><div class="mode-label">Любая тема Telegram</div>
+      <div class="phone" style="--bg:#731419;--surface:#5E1015;--text:#F3E6D0;--muted:#C9A98C;--accent:#D4A96A;--on-accent:#731419;--line:#9A4A43;--ph:#8A2A2A;--price:#D4A96A;--btn:#D4A96A;--on-btn:#731419">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+  </div>
+</section>
+
+<!-- Variant B: adaptive brand. Light: bg #F7EFE3, surface #FFFFFF, text #3A0B0E, accent #731419, gold #B8894A. Dark: bg #2B0B0E, surface #3E1216, text #F3E6D0, accent #D4A96A -->
+<section class="variant">
+  <h2>B. «Бренд, светлый и тёмный»</h2>
+  <p class="reg">В светлой теме — кремовый фон, бордовые акценты и золото; в тёмной — глубокий бордовый с золотом. Узнаваемо и удобно читать днём.</p>
+  <div class="chips">
+    <span class="chip"><span class="sw" style="background:#F7EFE3"></span>светлый фон #F7EFE3</span>
+    <span class="chip"><span class="sw" style="background:#731419"></span>акцент #731419</span>
+    <span class="chip"><span class="sw" style="background:#B8894A"></span>золото #B8894A</span>
+    <span class="chip"><span class="sw" style="background:#2B0B0E"></span>тёмный фон #2B0B0E</span>
+    <span class="chip"><span class="sw" style="background:#D4A96A"></span>тёмный акцент #D4A96A</span>
+  </div>
+  <div class="modes">
+    <div><div class="mode-label">Светлая тема</div>
+      <div class="phone" style="--bg:#F7EFE3;--surface:#FFFFFF;--text:#3A0B0E;--muted:#8A6A5A;--accent:#731419;--on-accent:#F7EFE3;--line:#E2CFB6;--ph:#EAD9C2;--price:#731419;--btn:#731419;--on-btn:#F7EFE3">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+    <div><div class="mode-label">Тёмная тема</div>
+      <div class="phone" style="--bg:#2B0B0E;--surface:#3E1216;--text:#F3E6D0;--muted:#BFA088;--accent:#D4A96A;--on-accent:#2B0B0E;--line:#5A2A28;--ph:#5A1A1E;--price:#D4A96A;--btn:#D4A96A;--on-btn:#2B0B0E">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+  </div>
+</section>
+
+<!-- Variant C: Telegram-native with brand accents. Uses Telegram theme bg/text (#FFFFFF/#000 light, #17212B/#F5F5F5 dark); buttons #731419 light / #D4A96A dark -->
+<section class="variant">
+  <h2>C. «Родной Telegram с акцентами бренда»</h2>
+  <p class="reg">Фон и текст — из темы Telegram пользователя; бордовый и золото только на кнопках, ценах и заголовке. Выглядит как часть Telegram, бренд — сдержанно.</p>
+  <div class="chips">
+    <span class="chip"><span class="sw" style="background:#FFFFFF"></span>фон из Telegram</span>
+    <span class="chip"><span class="sw" style="background:#731419"></span>кнопки (светлая) #731419</span>
+    <span class="chip"><span class="sw" style="background:#D4A96A"></span>кнопки (тёмная) #D4A96A</span>
+  </div>
+  <div class="modes">
+    <div><div class="mode-label">Светлая тема</div>
+      <div class="phone" style="--bg:#FFFFFF;--surface:#F4F4F5;--text:#111;--muted:#707579;--accent:#731419;--on-accent:#fff;--line:#E4E4E7;--ph:#E8E2DA;--price:#731419;--btn:#731419;--on-btn:#fff">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+    <div><div class="mode-label">Тёмная тема</div>
+      <div class="phone" style="--bg:#17212B;--surface:#232E3C;--text:#F5F5F5;--muted:#8B98A5;--accent:#D4A96A;--on-accent:#17212B;--line:#2F3B48;--ph:#3A3030;--price:#D4A96A;--btn:#D4A96A;--on-btn:#17212B">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+  </div>
+</section>
+
+<!-- Variant D: gold on graphite. Dark: bg #1C1A19, surface #2A2624, gold #D4A96A, bordeaux #8C1D24 for badges. Light: bg #FFFFFF, text #1C1A19, accent #731419 -->
+<section class="variant">
+  <h2>D. «Золото на графите»</h2>
+  <p class="reg">Тёмный графит вместо бордового, золото — главный акцент, бордовый — только для меток. Более «вечерний» и премиальный, но дальше от печатного меню.</p>
+  <div class="chips">
+    <span class="chip"><span class="sw" style="background:#1C1A19"></span>фон #1C1A19</span>
+    <span class="chip"><span class="sw" style="background:#D4A96A"></span>акцент #D4A96A</span>
+    <span class="chip"><span class="sw" style="background:#8C1D24"></span>метки #8C1D24</span>
+  </div>
+  <div class="modes">
+    <div><div class="mode-label">Светлая тема</div>
+      <div class="phone" style="--bg:#FFFFFF;--surface:#F6F3EF;--text:#1C1A19;--muted:#7A706A;--accent:#731419;--on-accent:#fff;--line:#E7E1DA;--ph:#EDE5DA;--price:#1C1A19;--btn:#1C1A19;--on-btn:#D4A96A">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+    <div><div class="mode-label">Тёмная тема</div>
+      <div class="phone" style="--bg:#1C1A19;--surface:#2A2624;--text:#F1E9DD;--muted:#A89C90;--accent:#D4A96A;--on-accent:#1C1A19;--line:#3A3431;--ph:#3A302A;--price:#D4A96A;--btn:#D4A96A;--on-btn:#1C1A19">
+        <p class="title">Феникс</p><div class="status">Открыто до 22:00</div>
+        <div class="cats"><span class="cat on">Роллы</span><span class="cat">Пицца</span><span class="cat">Бургеры</span><span class="cat">Кофе</span></div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Капучино</b><small>250 / 400 мл</small><span class="price">от 200 ₽</span><span class="sold">Закончилось</span></div></div>
+        <div class="cart">Корзина · 799 ₽</div>
+      </div></div>
+  </div>
+</section>
+</body>
+</html>

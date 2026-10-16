@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Феникс — шрифт заголовков</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poiret+One&family=Forum&family=Tenor+Sans&family=Cormorant+Unicase:wght@500&display=swap&subset=cyrillic" rel="stylesheet">
+<style>
+  /* Palette B, dark: bg #2B0B0E, accent #D4A96A, text #F3E6D0. Light: bg #F7EFE3, accent #731419 */
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #ECE9E4; color: #222; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 20px; color: #555; max-width: 70ch; }
+  .ref { margin-bottom: 24px; }
+  .ref img { max-width: 100%; border-radius: 12px; display: block; }
+  .opt { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .opt h2 { grid-column: 1 / -1; margin: 0; font-size: 16px; }
+  .opt h2 span { font-weight: 400; color: #666; }
+  .tile { border-radius: 12px; padding: 16px; }
+  .dark { background: #2B0B0E; color: #F3E6D0; }
+  .light { background: #F7EFE3; color: #3A0B0E; }
+  .big { font-size: 40px; letter-spacing: .12em; text-transform: uppercase; margin: 0; }
+  .dark .big, .dark .mid { color: #D4A96A; }
+  .light .big, .light .mid { color: #731419; }
+  .mid { font-size: 22px; letter-spacing: .14em; text-transform: uppercase; margin: 8px 0; }
+  .body { font-size: 15px; }
+  .body small { display: block; opacity: .7; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Шрифт заголовков</h1>
+<p class="lead">Заголовки в меню набраны тонкой геометрической гарнитурой в стиле ар-деко. Ниже — четыре бесплатных шрифта с кириллицей. Описания блюд и интерфейс — системным шрифтом телефона: так приложение открывается быстрее.</p>
+<div class="ref"><img src="../imports/menu-page-2.png" alt="Страница меню — образец заголовков"></div>
+
+<section class="opt" style="--f:'Poiret One'">
+  <h2>1. Poiret One <span>— тонкий ар-деко, ближе всего к «МЕНЮ» и «ЛИМОНАДЫ»</span></h2>
+  <div class="tile dark"><p class="big" style="font-family:'Poiret One'">Феникс</p><p class="mid" style="font-family:'Poiret One'">Роллы · Пицца · Кофе</p><div class="body">Калифорния с крабом · 599 ₽<small>рис, снежный краб, икра тобико · 155 г</small></div></div>
+  <div class="tile light"><p class="big" style="font-family:'Poiret One'">Феникс</p><p class="mid" style="font-family:'Poiret One'">Бургеры · Десерты</p><div class="body">Капучино · от 200 ₽<small>250 / 400 мл</small></div></div>
+</section>
+
+<section class="opt">
+  <h2>2. Forum <span>— классическая антиква с засечками, торжественно</span></h2>
+  <div class="tile dark"><p class="big" style="font-family:'Forum'">Феникс</p><p class="mid" style="font-family:'Forum'">Роллы · Пицца · Кофе</p><div class="body">Калифорния с крабом · 599 ₽<small>рис, снежный краб, икра тобико · 155 г</small></div></div>
+  <div class="tile light"><p class="big" style="font-family:'Forum'">Феникс</p><p class="mid" style="font-family:'Forum'">Бургеры · Десерты</p><div class="body">Капучино · от 200 ₽<small>250 / 400 мл</small></div></div>
+</section>
+
+<section class="opt">
+  <h2>3. Tenor Sans <span>— строгий гротеск с характером, читается лучше всех</span></h2>
+  <div class="tile dark"><p class="big" style="font-family:'Tenor Sans'">Феникс</p><p class="mid" style="font-family:'Tenor Sans'">Роллы · Пицца · Кофе</p><div class="body">Калифорния с крабом · 599 ₽<small>рис, снежный краб, икра тобико · 155 г</small></div></div>
+  <div class="tile light"><p class="big" style="font-family:'Tenor Sans'">Феникс</p><p class="mid" style="font-family:'Tenor Sans'">Бургеры · Десерты</p><div class="body">Капучино · от 200 ₽<small>250 / 400 мл</small></div></div>
+</section>
+
+<section class="opt">
+  <h2>4. Cormorant Unicase <span>— изящный, «ресторанный», заглавные и строчные одной высоты</span></h2>
+  <div class="tile dark"><p class="big" style="font-family:'Cormorant Unicase'">Феникс</p><p class="mid" style="font-family:'Cormorant Unicase'">Роллы · Пицца · Кофе</p><div class="body">Калифорния с крабом · 599 ₽<small>рис, снежный краб, икра тобико · 155 г</small></div></div>
+  <div class="tile light"><p class="big" style="font-family:'Cormorant Unicase'">Феникс</p><p class="mid" style="font-family:'Cormorant Unicase'">Бургеры · Десерты</p><div class="body">Капучино · от 200 ₽<small>250 / 400 мл</small></div></div>
+</section>
+</body>
+</html>
