@@ -14,7 +14,7 @@ export function Header({ location, onAbout }: Props) {
         <div>
           <h1 className="display">Феникс</h1>
           <p className="caption muted header-status" aria-live="polite">
-            {location.kind === 'ready' ? location.location.status.text : ' '}
+            {location.kind === 'ready' ? location.data.status.text : ' '}
           </p>
         </div>
       </div>

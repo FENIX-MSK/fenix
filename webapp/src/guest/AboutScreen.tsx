@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import type { LocationInfo } from '../api/types'
 import { platform } from '../platform'
 import { NETWORK_ERROR, RETRY } from './texts'
 import type { LocationState } from './useLocationInfo'
@@ -32,12 +33,12 @@ export function AboutScreen({ location, onBack, onRetry }: Props) {
           </button>
         </div>
       )}
-      {location.kind === 'ready' && <AboutContent location={location.location} />}
+      {location.kind === 'ready' && <AboutContent location={location.data} />}
     </main>
   )
 }
 
-function AboutContent({ location }: { location: Extract<LocationState, { kind: 'ready' }>['location'] }) {
+function AboutContent({ location }: { location: LocationInfo }) {
   const byWeekday = new Map(location.opening_hours.map((h) => [h.weekday, h]))
   return (
     <>

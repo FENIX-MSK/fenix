@@ -15,3 +15,6 @@
 - source_spec: `docs/implementation-artifacts/spec-1-3-location-hours-and-info.md`
   summary: Проверять IANA-пояс и часы работы при редактировании точки (история 2.7).
   evidence: `ZoneInfo` с неверным именем бросает исключение, и `/api/v1/location` ответит 500.
+- source_spec: `docs/implementation-artifacts/spec-1-5-guest-browses-menu.md`
+  summary: Добавить тестовый раннер Mini App (например, Vitest + Testing Library) и покрыть карточку блюда, «Закончилось» и форматирование цены.
+  evidence: Поведение экрана меню проверено только вручную в браузере; в `webapp` нет тестов.

@@ -18,6 +18,7 @@ __all__ = [
     "SocialLink",
     "format_time",
     "get_default_location",
+    "get_default_location_id",
     "seed_defaults",
 ]
 
@@ -78,6 +79,11 @@ async def get_default_location(session: AsyncSession, now: datetime) -> Location
         opening_hours=[OpeningInterval(i.weekday, i.opens_at, i.closes_at) for i in intervals],
         status=hours.opening_status(intervals, location.timezone, now),
     )
+
+
+async def get_default_location_id(session: AsyncSession) -> uuid.UUID | None:
+    location = await service.get_default_location(session)
+    return location.id if location else None
 
 
 async def seed_defaults(session: AsyncSession) -> bool:

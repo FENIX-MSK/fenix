@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/menu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Menu */
+        get: operations["get_menu_api_v1_menu_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -112,6 +129,56 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /** MenuCategoryOut */
+        MenuCategoryOut: {
+            /** Description */
+            description: string;
+            /** Dishes */
+            dishes: components["schemas"]["MenuDishOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** MenuDishOut */
+        MenuDishOut: {
+            /** Description */
+            description: string;
+            /**
+             * Has Sizes
+             * @description Several sizes: show the price as «от N ₽»
+             */
+            has_sizes: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Photo Url */
+            photo_url: string | null;
+            /**
+             * Portion
+             * @description Weight or volume as printed, e.g. «190 г»
+             */
+            portion: string | null;
+            /**
+             * Price From
+             * @description Kopecks; the lowest price of an available size
+             */
+            price_from: number;
+            /** Sold Out */
+            sold_out: boolean;
+        };
+        /** MenuOut */
+        MenuOut: {
+            /** Categories */
+            categories: components["schemas"]["MenuCategoryOut"][];
         };
         /** OpeningHoursOut */
         OpeningHoursOut: {
@@ -241,6 +308,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_menu_api_v1_menu_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MenuOut"];
                 };
             };
             /** @description Client error */
