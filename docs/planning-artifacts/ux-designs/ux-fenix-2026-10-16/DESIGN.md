@@ -184,6 +184,11 @@ components:
   connection-banner:
     background: '{colors.text}'
     text: '{colors.bg}'
+  kitchen-load:
+    dot-calm: '{colors.status-ready-text}'
+    dot-busy: '{colors.status-cooking-text}'
+    dot-high: '{colors.accent}'
+    text: '{typography.caption}'
   reason-sheet:
     background: '{colors.surface}'
     radius: '{rounded.xl}'
@@ -248,6 +253,7 @@ components:
 - **Нижняя навигация персонала** — 4 пункта, активный `{colors.accent}`, подписи всегда видны.
 - **Скелетон** — блоки `{colors.surface-sunken}` в форме карточек, без мерцания при «уменьшить движение».
 - **Баннер связи** — тонкая полоса сверху, инверсные цвета `{colors.text}` / `{colors.bg}`.
+- **Индикатор загруженности кухни** — тихая строка в шапке: точка 8 px (спокойно — зелёный, умеренно — янтарь, загружено — `{colors.accent}`) и текст `{typography.caption}` цвета `{colors.text-muted}`: «Готовим ≈20 мин». На уровне «загружено» текст «Кухня загружена · ≈40 мин» цвета `{colors.text}`. Без плашек, рамок и анимации. У персонала — то же в шапке доски с числом заказов в работе.
 - **Лист причин отмены** — нижний лист `{rounded.xl}`, список причин и поле «Другое».
 
 Макеты: [ключевые экраны](mockups/key-screens.html), [выбор палитры](mockups/color-themes.html), [выбор шрифта](mockups/typography.html). При расхождении с макетами прав этот документ.
