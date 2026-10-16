@@ -73,7 +73,9 @@ jobs:
           cd /opt/fenix
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-          docker compose -f compose.prod.yaml pull
+          # MinIO images are no longer published; that one is preloaded on the server.
+          # A truly missing image still fails at "up".
+          docker compose -f compose.prod.yaml pull --ignore-pull-failures
           docker compose -f compose.prod.yaml up -d --remove-orphans
           docker logout ghcr.io
           docker image prune -f
