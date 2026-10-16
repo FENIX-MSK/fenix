@@ -4,8 +4,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy.engine import Connection
 
-from fenix.config import get_settings
-from fenix.db import Base, create_engine
+from fenix.platform.config import get_settings
+from fenix.platform.db import Base, create_engine
 
 config = context.config
 if config.config_file_name is not None:

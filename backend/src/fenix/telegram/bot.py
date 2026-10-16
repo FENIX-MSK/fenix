@@ -4,7 +4,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.types import MenuButtonWebApp, WebAppInfo
 
-from fenix.config import Settings
+from fenix.platform.config import Settings
 from fenix.telegram.handlers import start
 
 

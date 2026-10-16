@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
-from fenix.config import Settings
+from fenix.platform.config import Settings
 
 GREETING = (
     "Добро пожаловать в <b>Феникс бистро</b>!\n\n"

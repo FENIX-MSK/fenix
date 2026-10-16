@@ -1,4 +1,4 @@
-from fenix.config import Settings
+from fenix.platform.config import Settings
 from fenix.telegram.handlers.start import build_start_keyboard
 
 

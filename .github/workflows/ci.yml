@@ -26,6 +26,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy
+      - run: uv run lint-imports
       - run: uv run pytest
 
   webapp:
@@ -40,7 +41,17 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: webapp/package-lock.json
+      # The API client is generated from the backend's OpenAPI schema.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+        working-directory: backend
       - run: npm ci
+      - name: Generated API client is up to date
+        run: |
+          npm run gen:api
+          git diff --exit-code src/api/schema.d.ts
       - run: npm run lint
       - run: npm run build
 
