@@ -23,6 +23,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings.database_url)
+        app.state.settings = settings
         app.state.session_factory = create_session_factory(engine)
         log.info("app.started", environment=settings.environment)
         try:
