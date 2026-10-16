@@ -1,0 +1,59 @@
+[importlinter]
+root_package = fenix
+# Lets contracts name third-party packages (aiogram) as forbidden.
+include_external_packages = True
+
+# AD-1: a module reaches another module only through its public `api`.
+[importlinter:contract:modules-independent]
+name = Modules depend on each other only via fenix.modules.<m>.api
+type = independence
+modules =
+    fenix.modules.*
+ignore_imports =
+    fenix.modules.** -> fenix.modules.*.api
+# The api surfaces are still empty, so the ignores match nothing yet.
+unmatched_ignore_imports_alerting = none
+
+# AD-1: adapters use modules only through their public `api` as well.
+[importlinter:contract:adapters-use-module-api]
+name = Adapters import modules only via fenix.modules.<m>.api
+type = forbidden
+source_modules =
+    fenix.http
+    fenix.telegram
+    fenix.worker
+    fenix.main
+forbidden_modules =
+    fenix.modules.*.*
+ignore_imports =
+    fenix.http.** -> fenix.modules.*.api
+    fenix.telegram.** -> fenix.modules.*.api
+    fenix.worker -> fenix.modules.*.api
+    fenix.main -> fenix.modules.*.api
+unmatched_ignore_imports_alerting = none
+
+# AD-1, AD-8: modules sit below the adapters and know nothing about the messenger.
+[importlinter:contract:modules-below-adapters]
+name = Modules do not import adapters or the messenger SDK
+type = forbidden
+source_modules =
+    fenix.modules
+forbidden_modules =
+    fenix.http
+    fenix.telegram
+    fenix.worker
+    fenix.main
+    aiogram
+
+# AD-1: platform is the bottom layer.
+[importlinter:contract:platform-is-bottom]
+name = Platform does not depend on modules or adapters
+type = forbidden
+source_modules =
+    fenix.platform
+forbidden_modules =
+    fenix.modules
+    fenix.http
+    fenix.telegram
+    fenix.worker
+    fenix.main

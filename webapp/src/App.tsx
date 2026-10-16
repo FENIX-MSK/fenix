@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { apiGet } from './api/client'
+import { api } from './api/client'
 import { platform } from './platform'
 
 type ApiStatus = 'checking' | 'ok' | 'unavailable'
@@ -10,8 +10,9 @@ export default function App() {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('checking')
 
   useEffect(() => {
-    apiGet<{ status: string }>('/health')
-      .then((body) => setApiStatus(body.status === 'ok' ? 'ok' : 'unavailable'))
+    api
+      .GET('/api/health')
+      .then(({ data }) => setApiStatus(data?.status === 'ok' ? 'ok' : 'unavailable'))
       .catch(() => setApiStatus('unavailable'))
   }, [])
 

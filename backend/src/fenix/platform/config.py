@@ -10,11 +10,6 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
-class BotMode(StrEnum):
-    POLLING = "polling"
-    WEBHOOK = "webhook"
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
@@ -29,11 +24,6 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     telegram_bot_token: SecretStr
-    telegram_bot_mode: BotMode = BotMode.POLLING
-    # Base public URL of the deployment, e.g. https://fenix.example.ru.
-    # The webhook is registered at {public_base_url}/telegram/webhook.
-    public_base_url: str | None = None
-    telegram_webhook_secret: SecretStr | None = None
     # Where the Mini App is served. Telegram requires HTTPS outside its test environment.
     webapp_url: str | None = None
     # Outbound proxy for the Bot API (http://, socks5://). Needed where Telegram is blocked.

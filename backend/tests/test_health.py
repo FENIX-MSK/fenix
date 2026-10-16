@@ -1,9 +1,7 @@
-import pytest
-from aiogram import Bot
 from fastapi.testclient import TestClient
 
-from fenix.config import BotMode, Settings
 from fenix.main import create_app
+from fenix.platform.config import Settings
 
 
 def test_health() -> None:
@@ -14,23 +12,13 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_webhook_rejects_missing_secret() -> None:
-    app = create_app(Settings())
-    with TestClient(app) as client:
-        response = client.post("/telegram/webhook", json={"update_id": 1})
-    assert response.status_code == 401
-
-
-def test_api_starts_when_telegram_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def unreachable(*args: object, **kwargs: object) -> None:
-        raise ConnectionError("telegram is blocked")
-
-    monkeypatch.setattr(Bot, "set_webhook", unreachable)
-    settings = Settings(
-        telegram_bot_mode=BotMode.WEBHOOK,
-        public_base_url="https://example.test",
-        telegram_webhook_secret="secret",
-    )
-    with TestClient(create_app(settings)) as client:
-        response = client.get("/api/health")
+def test_metrics_stay_outside_the_versioned_api() -> None:
+    with TestClient(create_app(Settings())) as client:
+        response = client.get("/metrics")
     assert response.status_code == 200
+
+
+def test_telegram_webhook_is_gone() -> None:
+    with TestClient(create_app(Settings())) as client:
+        response = client.post("/telegram/webhook", json={"update_id": 1})
+    assert response.status_code == 404

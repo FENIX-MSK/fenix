@@ -1,11 +1,11 @@
-"""Run the bot with long polling. Local development only; production uses the webhook."""
+"""Bot service: receives updates with long polling in every environment (AD-8)."""
 
 import asyncio
 
 import structlog
 
-from fenix.config import get_settings
-from fenix.logging import configure_logging
+from fenix.platform.config import get_settings
+from fenix.platform.logging import configure_logging
 from fenix.telegram.bot import configure_menu_button, create_bot, create_dispatcher
 
 log = structlog.get_logger()
