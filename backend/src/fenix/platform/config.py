@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     telegram_bot_token: SecretStr
+    # Bot username without "@", for t.me deep links (staff invitations).
+    telegram_bot_username: str | None = None
+    # The first staff member: the Telegram user with this username who presses «Старт»
+    # while the location has no staff yet. Set only in the server's .env.
+    bootstrap_staff_telegram_username: str | None = None
     # Where the Mini App is served. Telegram requires HTTPS outside its test environment.
     webapp_url: str | None = None
     # Outbound proxy for the Bot API (http://, socks5://). Needed where Telegram is blocked.

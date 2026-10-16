@@ -116,11 +116,17 @@ def check_menu_and_price(client: Client) -> None:
     expect(price["unit_price"] > 0 and price["total_price"] == price["unit_price"] * 2, "bad price")
 
 
+def check_staff_is_closed(client: Client) -> None:
+    status, body = client.request("GET", "/api/v1/staff/me")
+    expect(status == 403 and body["error"]["code"] == "forbidden", "staff API open to a guest")
+
+
 CHECKS: list[tuple[str, Callable[[Client], None]]] = [
     ("health", check_health),
     ("auth", check_auth),
     ("location", check_location),
     ("menu-and-price", check_menu_and_price),
+    ("staff-is-closed", check_staff_is_closed),
 ]
 
 

@@ -609,3 +609,128 @@ a {
     transform: rotate(360deg);
   }
 }
+
+/* Shared controls */
+.primary-button {
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.card {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.card .section {
+  margin-bottom: var(--space-2);
+  color: var(--gold-text);
+}
+
+.card p {
+  margin: 0 0 var(--space-3);
+}
+
+.error-text {
+  color: var(--error);
+}
+
+.list {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.list li:last-child .list-item {
+  border-bottom: 0;
+}
+
+/* Header actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.staff-entry {
+  font-weight: 600;
+}
+
+/* Staff section */
+.staff {
+  min-height: 100dvh;
+  padding: var(--space-2) var(--gutter) calc(72px + env(safe-area-inset-bottom));
+}
+
+.staff-title {
+  padding-top: var(--space-3);
+  color: var(--accent);
+}
+
+.invite-url {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.bottom-nav-item {
+  min-height: 56px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bottom-nav-item.active {
+  color: var(--accent);
+  font-weight: 600;
+}

@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 # Tests must never talk to the real bot; aiogram only validates the token format.
 # Forced, not defaulted: test launch data is signed with this exact token.
 os.environ["TELEGRAM_BOT_TOKEN"] = "123456:TEST-TOKEN"
+os.environ["TELEGRAM_BOT_USERNAME"] = "fenix_test_bot"
+os.environ.pop("BOOTSTRAP_STAFF_TELEGRAM_USERNAME", None)
 # Tests must never touch the development database either.
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+asyncpg://fenix:fenix@localhost:5432/fenix_test"
@@ -94,3 +96,28 @@ async def seeded(
         await locations.seed_defaults(session)
         await catalog.seed_menu(session)
     return session_factory
+
+
+STAFF_TELEGRAM_ID = 777
+
+
+@pytest.fixture
+async def staff_headers(seeded: async_sessionmaker[AsyncSession]) -> dict[str, str]:
+    """Launch data of a staff member of the default location."""
+    from init_data import sign_init_data
+
+    from fenix.modules.identity import api as identity
+    from fenix.modules.locations import api as locations
+
+    async with seeded() as session, session.begin():
+        user = await identity.ensure_user(
+            session,
+            platform=identity.Platform.TELEGRAM,
+            external_id=str(STAFF_TELEGRAM_ID),
+            first_name="Света",
+        )
+        location_id = await locations.get_default_location_id(session)
+        assert location_id is not None
+        await identity.bootstrap_first_staff(session, user.id, location_id)
+    init_data = sign_init_data({"id": STAFF_TELEGRAM_ID, "first_name": "Света"})
+    return {"Authorization": f"tma {init_data}"}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 
 import type { MenuDish } from './api/types'
 import { AboutScreen } from './guest/AboutScreen'
@@ -6,10 +6,13 @@ import { DishSheet } from './guest/DishSheet'
 import { Header } from './guest/Header'
 import { MenuScreen } from './guest/MenuScreen'
 import { useLocationInfo } from './guest/useLocationInfo'
+import { useMe } from './guest/useMe'
 import { useMenu } from './guest/useMenu'
 import { platform } from './platform'
 
-type Screen = 'menu' | 'about'
+type Screen = 'menu' | 'about' | 'staff'
+
+const StaffApp = lazy(() => import('./staff/StaffApp'))
 
 function useTheme() {
   useEffect(() => {
@@ -25,16 +28,29 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('menu')
   const { state: location, reload: reloadLocation } = useLocationInfo()
   const { state: menu, reload: reloadMenu } = useMenu()
+  const { state: me } = useMe()
+  const isStaff = me.kind === 'ready' && me.data.is_staff
   const openMenu = useCallback(() => setScreen('menu'), [])
   const [openDish, setOpenDish] = useState<MenuDish | null>(null)
   const closeDish = useCallback(() => setOpenDish(null), [])
 
+  if (screen === 'staff' && isStaff) {
+    return (
+      <Suspense fallback={<div className="screen" aria-busy="true" />}>
+        <StaffApp onExit={openMenu} />
+      </Suspense>
+    )
+  }
   if (screen === 'about') {
     return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
   }
   return (
     <div className="screen">
-      <Header location={location} onAbout={() => setScreen('about')} />
+      <Header
+        location={location}
+        onAbout={() => setScreen('about')}
+        onStaff={isStaff ? () => setScreen('staff') : undefined}
+      />
       <main>
         <MenuScreen menu={menu} onRetry={reloadMenu} onOpenDish={setOpenDish} />
       </main>

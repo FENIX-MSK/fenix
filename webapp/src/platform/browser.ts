@@ -12,6 +12,9 @@ export const browserPlatform: Platform = {
   // The browser's own back is the fallback; screens also offer an in-page back link.
   showBackButton: () => () => {},
   haptic() {},
+  openTelegramLink(url) {
+    window.open(url, '_blank', 'noopener')
+  },
   openLink(url) {
     window.open(url, '_blank', 'noopener')
   },
