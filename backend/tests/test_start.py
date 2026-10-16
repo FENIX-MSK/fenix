@@ -7,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from fenix.modules.identity.models import IdentityUser
 from fenix.platform.config import Settings
-from fenix.telegram.handlers.start import GREETING, build_start_keyboard, handle_start
+from fenix.telegram.handlers.start import (
+    GREETING,
+    INVITATION_INVALID,
+    STAFF_GRANTED,
+    build_start_keyboard,
+    handle_start,
+)
 
 
 def test_start_keyboard_hidden_without_webapp_url() -> None:
@@ -41,13 +47,16 @@ class FakeMessage:
 
 
 async def start(
-    factory: async_sessionmaker[AsyncSession], args: str | None, message: FakeMessage | None = None
+    factory: async_sessionmaker[AsyncSession],
+    args: str | None,
+    message: FakeMessage | None = None,
+    **settings: str,
 ) -> FakeMessage:
     message = message or FakeMessage()
     await handle_start(
         message,  # type: ignore[arg-type]
         CommandObject(command="start", args=args),
-        Settings(webapp_url="https://example.test"),
+        Settings(webapp_url="https://example.test", **settings),  # type: ignore[arg-type]
         factory,
     )
     return message
@@ -87,3 +96,45 @@ async def test_start_from_unknown_sender_only_answers(
     message = await start(session_factory, None, FakeMessage(from_user=None))
     assert await sources(session_factory) == []
     assert len(message.answers) == 1
+
+
+async def test_bootstrap_by_username(seeded: async_sessionmaker[AsyncSession]) -> None:
+    owner = FakeMessage(from_user=Sender(id=10, username="Owner"))
+    message = await start(seeded, None, owner, bootstrap_staff_telegram_username="@owner")
+    assert message.answers[0][0] == STAFF_GRANTED
+    other = FakeMessage(from_user=Sender(id=11, username="owner2"))
+    assert (await start(seeded, None, other, bootstrap_staff_telegram_username="owner")).answers[0][
+        0
+    ] == GREETING
+    again = FakeMessage(from_user=Sender(id=12, username="owner"))
+    # A second account with the same username after staff exists: ignored.
+    assert (await start(seeded, None, again, bootstrap_staff_telegram_username="owner")).answers[0][
+        0
+    ] == GREETING
+
+
+async def test_invitation_through_the_bot(seeded: async_sessionmaker[AsyncSession]) -> None:
+    from datetime import UTC, datetime
+
+    from fenix.modules.identity import api as identity
+    from fenix.modules.locations import api as locations
+
+    async with seeded() as session, session.begin():
+        owner = await identity.ensure_user(
+            session, platform=identity.Platform.TELEGRAM, external_id="1", first_name="Света"
+        )
+        location_id = await locations.get_default_location_id(session)
+        assert location_id is not None
+        await identity.bootstrap_first_staff(session, owner.id, location_id)
+        token, _ = await identity.create_invitation(
+            session, owner.id, location_id, datetime.now(UTC)
+        )
+
+    guest = FakeMessage(from_user=Sender(id=20))
+    assert (await start(seeded, f"inv_{token}", guest)).answers[0][0] == STAFF_GRANTED
+    late = FakeMessage(from_user=Sender(id=21))
+    assert (await start(seeded, f"inv_{token}", late)).answers[0][0] == INVITATION_INVALID
+    async with seeded() as session:
+        sources = set((await session.execute(select(IdentityUser.source))).scalars())
+    assert "staff_invite" in sources
+    assert not any(source.startswith("inv_") for source in sources)

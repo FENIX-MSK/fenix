@@ -33,3 +33,23 @@ async def configure_menu_button(bot: Bot, settings: Settings) -> None:
         await bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(text="Меню", web_app=WebAppInfo(url=settings.webapp_url))
         )
+
+
+_bot_username: str | None = None
+
+
+async def bot_username(settings: Settings) -> str:
+    """For t.me deep links: from settings, else asked from Telegram once and cached."""
+    global _bot_username
+    if settings.telegram_bot_username:
+        return settings.telegram_bot_username.lstrip("@")
+    if _bot_username is None:
+        bot = create_bot(settings)
+        try:
+            me = await bot.get_me()
+        finally:
+            await bot.session.close()
+        if not me.username:
+            raise RuntimeError("the bot has no username")
+        _bot_username = me.username
+    return _bot_username

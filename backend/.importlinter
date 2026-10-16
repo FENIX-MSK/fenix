@@ -25,6 +25,7 @@ source_modules =
     fenix.main
     fenix.seed
     fenix.smoke
+    fenix.staff_cli
 forbidden_modules =
     fenix.modules.*.*
 ignore_imports =
@@ -33,6 +34,8 @@ ignore_imports =
     fenix.worker -> fenix.modules.*.api
     fenix.main -> fenix.modules.*.api
     fenix.seed -> fenix.modules.*.api
+    fenix.staff_cli -> fenix.modules.*.api
+    fenix.smoke -> fenix.modules.*.api
 unmatched_ignore_imports_alerting = none
 
 # AD-1, AD-8: modules sit below the adapters and know nothing about the messenger.
@@ -48,7 +51,7 @@ forbidden_modules =
     fenix.main
     fenix.seed
     fenix.smoke
-    fenix.smoke
+    fenix.staff_cli
     aiogram
 
 # AD-1: platform is the bottom layer.
@@ -65,3 +68,4 @@ forbidden_modules =
     fenix.main
     fenix.seed
     fenix.smoke
+    fenix.staff_cli

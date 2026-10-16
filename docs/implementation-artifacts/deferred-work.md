@@ -18,3 +18,6 @@
 - source_spec: `docs/implementation-artifacts/spec-1-5-guest-browses-menu.md`
   summary: Добавить тестовый раннер Mini App (например, Vitest + Testing Library) и покрыть карточку блюда, «Закончилось» и форматирование цены.
   evidence: Поведение экрана меню проверено только вручную в браузере; в `webapp` нет тестов.
+- source_spec: `docs/implementation-artifacts/spec-2-5-dish-photos-garage.md`
+  summary: Периодически удалять из бакета `media` объекты, на которые не ссылается ни одно блюдо или фото кафе.
+  evidence: При замене фото старый объект остаётся (ключи неизменяемы, удаление до коммита небезопасно).

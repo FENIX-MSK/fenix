@@ -34,6 +34,8 @@ class Location(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     # [{"kind": "telegram", "title": "Telegram", "url": "https://t.me/..."}], in display order.
     social_links: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    # Media keys of the cafe photos, in display order (story 2.7).
+    photo_keys: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

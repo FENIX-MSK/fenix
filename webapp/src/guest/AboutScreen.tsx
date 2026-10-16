@@ -42,6 +42,13 @@ function AboutContent({ location }: { location: LocationInfo }) {
   const byWeekday = new Map(location.opening_hours.map((h) => [h.weekday, h]))
   return (
     <>
+      {location.photos.length > 0 && (
+        <div className="photo-strip about-photos">
+          {location.photos.map((url) => (
+            <img key={url} src={url} alt="Фото кафе" loading="lazy" />
+          ))}
+        </div>
+      )}
       <p className="about-status">{location.status.text}</p>
       {location.description && <p className="muted">{location.description}</p>}
 
