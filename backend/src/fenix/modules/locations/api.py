@@ -1,5 +1,6 @@
 """Public API of `locations`: functions and DTOs, the only import surface for other modules."""
 
+import asyncio
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, time
@@ -7,19 +8,36 @@ from urllib.parse import quote
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.locations import hours, seed, service
+from fenix.modules.locations import editor, hours, seed, service
+from fenix.modules.locations.editor import (
+    HoursInput,
+    LocationEditError,
+    LocationInput,
+    SocialLinkInput,
+)
 from fenix.modules.locations.hours import OpeningStatus, format_time
 from fenix.modules.locations.models import Location
+from fenix.platform.images import MAX_UPLOAD_BYTES as MAX_PHOTO_BYTES
+from fenix.platform.images import ImageRejectedError, shrink
 
 __all__ = [
+    "MAX_PHOTO_BYTES",
+    "HoursInput",
+    "LocationEditError",
     "LocationInfo",
+    "LocationInput",
     "OpeningInterval",
     "OpeningStatus",
     "SocialLink",
+    "SocialLinkInput",
+    "add_photo",
     "format_time",
     "get_default_location",
     "get_default_location_id",
+    "prepare_photo",
+    "remove_photo",
     "seed_defaults",
+    "update_location",
 ]
 
 
@@ -49,6 +67,7 @@ class LocationInfo:
     social_links: list[SocialLink]
     opening_hours: list[OpeningInterval]
     status: OpeningStatus
+    photo_keys: list[str]
 
 
 def _map_url(location: Location) -> str:
@@ -78,6 +97,7 @@ async def get_default_location(session: AsyncSession, now: datetime) -> Location
         ],
         opening_hours=[OpeningInterval(i.weekday, i.opens_at, i.closes_at) for i in intervals],
         status=hours.opening_status(intervals, location.timezone, now),
+        photo_keys=list(location.photo_keys),
     )
 
 
@@ -89,3 +109,27 @@ async def get_default_location_id(session: AsyncSession) -> uuid.UUID | None:
 async def seed_defaults(session: AsyncSession) -> bool:
     """Idempotent initial data; returns True when something was created."""
     return await seed.seed_default_location(session)
+
+
+async def update_location(
+    session: AsyncSession, location_id: uuid.UUID, data: LocationInput
+) -> None:
+    """Replace contacts, description, links and the weekly hours. Raises LocationEditError."""
+    await editor.update_location(session, location_id, data)
+
+
+async def prepare_photo(location_id: uuid.UUID, data: bytes) -> tuple[str, bytes]:
+    """A new key and the shrunk WebP. Raises LocationEditError for a rejected image."""
+    try:
+        webp = await asyncio.to_thread(shrink, data)
+    except ImageRejectedError as exc:
+        raise LocationEditError(exc.code) from exc
+    return editor.new_photo_key(location_id), webp
+
+
+async def add_photo(session: AsyncSession, location_id: uuid.UUID, key: str) -> list[str]:
+    return await editor.add_photo(session, location_id, key)
+
+
+async def remove_photo(session: AsyncSession, location_id: uuid.UUID, key: str) -> list[str]:
+    return await editor.remove_photo(session, location_id, key)

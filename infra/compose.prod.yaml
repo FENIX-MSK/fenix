@@ -10,6 +10,8 @@ x-backend: &backend
     REDIS_URL: redis://redis:6379/0
     # The VPS cannot reach Telegram directly; Bot API calls go through the tunnel.
     TELEGRAM_PROXY_URL: socks5://tg-egress:1080
+    S3_ENDPOINT_URL: http://garage:3900
+    GARAGE_ADMIN_URL: http://garage:3903
   restart: unless-stopped
   networks: [app]
 
@@ -31,6 +33,7 @@ services:
     restart: "no"
     depends_on:
       postgres: { condition: service_healthy }
+      garage: { condition: service_started }
 
   # Telegram updates are consumed only by the "bot" service (long polling, AD-8).
   api:
@@ -85,17 +88,16 @@ services:
     restart: unless-stopped
     networks: [app]
 
-  minio:
-    # MinIO stopped publishing images (Docker Hub / quay.io deny pulls); this tag
-    # must be preloaded with `docker load`. Replacement is an open decision.
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    pull_policy: missing
-    command: server /data --console-address :9001
+  garage:
+    image: dxflrs/garage:v2.4.1
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    ports: ["127.0.0.1:9001:9001"]  # console via SSH tunnel only
-    volumes: [minio-data:/data]
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    # Not published: the API writes over the internal network, Caddy serves /media/*.
     restart: unless-stopped
     networks: [app]
 
@@ -151,7 +153,8 @@ volumes:
   caddy-config:
   postgres-data:
   redis-data:
-  minio-data:
+  garage-meta:
+  garage-data:
   prometheus-data:
   loki-data:
   grafana-data:

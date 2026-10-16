@@ -17,7 +17,13 @@ Telegram's test environment accepts plain-HTTP Mini App URLs, so locally
 ## Production (VPS)
 
 Stack: `compose.prod.yaml` — Caddy (HTTPS + Mini App static), API, bot (polling),
-worker, tg-egress, Postgres, Redis, MinIO, Prometheus, Loki, Alloy, Grafana (`/grafana`).
+worker, tg-egress, Postgres, Redis, Garage (S3, photos at `/media/*`), Prometheus, Loki,
+Alloy, Grafana (`/grafana`).
+
+Garage needs no manual setup: the deploy generates its secrets in `/opt/fenix/.env`
+(`GARAGE_RPC_SECRET`, `GARAGE_ADMIN_TOKEN`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`)
+and `fenix-seed` in the `migrate` service creates the layout, the `media` bucket, the key
+and website access through the admin API.
 
 ### Telegram egress
 

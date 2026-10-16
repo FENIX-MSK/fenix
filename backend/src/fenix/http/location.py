@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from fenix.http.deps import SessionDep
+from fenix.http.media import photo_url
 from fenix.modules.locations import api as locations
 from fenix.platform.errors import ApiError
 
@@ -38,6 +39,7 @@ class LocationOut(BaseModel):
     social_links: list[SocialLinkOut]
     opening_hours: list[OpeningHoursOut]
     status: OpeningStatusOut
+    photos: list[str] = Field(description="Cafe photo URLs under /media/")
 
 
 @router.get("/location")
@@ -62,6 +64,7 @@ async def get_location(session: SessionDep) -> LocationOut:
             )
             for h in info.opening_hours
         ],
+        photos=[url for key in info.photo_keys if (url := photo_url(key))],
         status=OpeningStatusOut(
             is_open=info.status.is_open,
             text=info.status.text,

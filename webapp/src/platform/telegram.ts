@@ -11,6 +11,7 @@ import {
   mountThemeParamsSync,
   onBackButtonClick,
   openLink,
+  openTelegramLink,
   retrieveLaunchParams,
   retrieveRawInitData,
   setMiniAppBackgroundColor,
@@ -77,6 +78,11 @@ export const telegramPlatform: Platform = {
     } else if (hapticFeedbackNotificationOccurred.isAvailable()) {
       hapticFeedbackNotificationOccurred(kind)
     }
+  },
+
+  openTelegramLink(url) {
+    if (openTelegramLink.isAvailable()) openTelegramLink(url)
+    else window.open(url, '_blank', 'noopener')
   },
 
   openLink(url) {

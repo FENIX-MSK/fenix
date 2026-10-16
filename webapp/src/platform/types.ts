@@ -27,6 +27,8 @@ export interface Platform {
   showBackButton(onBack: () => void): () => void
   /** Short vibration: a choice made, a rejected action, a completed action. */
   haptic(kind: 'selection' | 'error' | 'success'): void
+  /** Open a t.me link inside Telegram (share sheet, chats, bots). */
+  openTelegramLink(url: string): void
   /** Open an external link (maps, social networks) outside the Mini App. */
   openLink(url: string): void
 }

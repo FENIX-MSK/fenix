@@ -1,5 +1,6 @@
 """Every /api/v1 request is made on behalf of the messenger user who opened the Mini App."""
 
+import uuid
 from typing import Annotated
 
 import structlog
@@ -7,6 +8,7 @@ from fastapi import Depends, Header
 
 from fenix.http.deps import SessionDep, SettingsDep
 from fenix.modules.identity import api as identity
+from fenix.modules.locations import api as locations
 from fenix.platform.errors import ApiError
 from fenix.platform.messenger_auth import InvalidInitDataError, verify_telegram_init_data
 
@@ -52,3 +54,25 @@ async def current_user(
 # FastAPI resolves a dependency once per request, so the router-wide check and a
 # route's `user: CurrentUser` parameter share one verification and one lookup.
 CurrentUser = Annotated[identity.User, Depends(current_user)]
+
+
+async def current_location_id(session: SessionDep) -> uuid.UUID:
+    location_id = await locations.get_default_location_id(session)
+    if location_id is None:
+        raise ApiError(404, "location_not_found", "No location is configured")
+    return location_id
+
+
+LocationIdDep = Annotated[uuid.UUID, Depends(current_location_id)]
+
+
+async def current_staff(
+    user: CurrentUser, session: SessionDep, location_id: LocationIdDep
+) -> identity.User:
+    """Staff routes are checked on the server on every request (AD-7)."""
+    if not await identity.is_staff(session, user.id, location_id):
+        raise ApiError(403, "forbidden", "This section is for the cafe staff")
+    return user
+
+
+CurrentStaff = Annotated[identity.User, Depends(current_staff)]
