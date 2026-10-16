@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
-from fenix.http import cart, checkout, location, me, menu, staff
+from fenix.http import cart, checkout, location, me, menu, orders, staff
 from fenix.http.auth import current_user
 from fenix.platform.errors import ErrorResponse
 
@@ -23,3 +23,4 @@ api_v1.include_router(menu.router)
 api_v1.include_router(staff.router)
 api_v1.include_router(cart.router)
 api_v1.include_router(checkout.router)
+api_v1.include_router(orders.router)
