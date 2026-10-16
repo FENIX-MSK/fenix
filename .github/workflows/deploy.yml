@@ -106,14 +106,20 @@ jobs:
         env:
           WEBAPP_URL: ${{ vars.WEBAPP_URL }}
         run: |
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s <<SCRIPT
+          # `exec -T` reads stdin: without </dev/null it would swallow the rest of the
+          # heredoc and the smoke test would silently never run.
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s > smoke.log <<SCRIPT
           set -euo pipefail
           cd /opt/fenix
           for attempt in \$(seq 1 30); do
-            if docker compose -f compose.prod.yaml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)" 2>/dev/null; then break; fi
+            if docker compose -f compose.prod.yaml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)" </dev/null 2>/dev/null; then break; fi
             sleep 5
           done
           # Through the public URL: Caddy, TLS, API and database together.
-          docker compose -f compose.prod.yaml exec -T api fenix-smoke "${WEBAPP_URL}"
-          docker compose -f compose.prod.yaml ps --format "{{.Service}} {{.State}} {{.Status}}"
+          docker compose -f compose.prod.yaml exec -T api fenix-smoke "${WEBAPP_URL}" </dev/null
+          docker compose -f compose.prod.yaml ps --format "{{.Service}} {{.State}} {{.Status}}" </dev/null
+          echo "smoke: finished"
           SCRIPT
+          cat smoke.log
+          grep -q "^smoke: finished$" smoke.log
+          ! grep -q "^FAIL" smoke.log
