@@ -202,3 +202,97 @@ async def reorder_dishes(body: DishOrderIn, session: SessionDep) -> None:
         await catalog.reorder_dishes(session, body.category_id, body.ids)
     except catalog.CatalogEditError as exc:
         raise _rejected(exc) from exc
+
+
+class OptionIn(BaseModel):
+    id: uuid.UUID | None = None
+    name: str = Field(max_length=128)
+    price_delta: int = Field(default=0, ge=0, le=10_000_000, description="Kopecks")
+
+
+class GroupIn(BaseModel):
+    name: str = Field(max_length=128)
+    min_choice: int = Field(ge=0, le=50)
+    max_choice: int = Field(ge=1, le=50)
+    options: list[OptionIn] = Field(max_length=50)
+
+
+class LinksIn(BaseModel):
+    dish_ids: list[uuid.UUID] = Field(default_factory=list)
+    category_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class OptionOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    price_delta: int
+
+
+class GroupOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    min_choice: int
+    max_choice: int
+    options: list[OptionOut]
+    dish_ids: list[uuid.UUID]
+    category_ids: list[uuid.UUID]
+
+
+def _group_input(body: GroupIn) -> catalog.GroupInput:
+    return catalog.GroupInput(
+        name=body.name,
+        min_choice=body.min_choice,
+        max_choice=body.max_choice,
+        options=[catalog.OptionInput(o.id, o.name, o.price_delta) for o in body.options],
+    )
+
+
+@router.get("/modifier-groups")
+async def list_groups(session: SessionDep) -> list[GroupOut]:
+    return [
+        GroupOut(
+            id=g.id,
+            name=g.name,
+            min_choice=g.min_choice,
+            max_choice=g.max_choice,
+            options=[OptionOut(id=o.id, name=o.name, price_delta=o.price_delta) for o in g.options],
+            dish_ids=g.links.dish_ids,
+            category_ids=g.links.category_ids,
+        )
+        for g in await catalog.list_groups(session)
+    ]
+
+
+@router.post("/modifier-groups")
+async def create_group(body: GroupIn, session: SessionDep) -> CreatedOut:
+    try:
+        group_id = await catalog.create_group(session, _group_input(body))
+    except catalog.CatalogEditError as exc:
+        raise _rejected(exc) from exc
+    return CreatedOut(id=group_id)
+
+
+@router.put("/modifier-groups/{group_id}")
+async def update_group(group_id: uuid.UUID, body: GroupIn, session: SessionDep) -> None:
+    try:
+        await catalog.update_group(session, group_id, _group_input(body))
+    except catalog.CatalogEditError as exc:
+        raise _rejected(exc) from exc
+
+
+@router.delete("/modifier-groups/{group_id}")
+async def delete_group(group_id: uuid.UUID, session: SessionDep) -> None:
+    try:
+        await catalog.delete_group(session, group_id)
+    except catalog.CatalogEditError as exc:
+        raise _rejected(exc) from exc
+
+
+@router.put("/modifier-groups/{group_id}/links")
+async def set_links(group_id: uuid.UUID, body: LinksIn, session: SessionDep) -> None:
+    try:
+        await catalog.set_group_links(
+            session, group_id, catalog.GroupLinks(body.dish_ids, body.category_ids)
+        )
+    except catalog.CatalogEditError as exc:
+        raise _rejected(exc) from exc

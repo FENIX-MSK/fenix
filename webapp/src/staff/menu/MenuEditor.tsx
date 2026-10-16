@@ -6,6 +6,7 @@ import { formatPrice } from '../../guest/format'
 import { useRemote } from '../../guest/useRemote'
 import { CategoryForm } from './CategoryForm'
 import { DishForm } from './DishForm'
+import { ModifierGroups } from './ModifierGroups'
 
 type Editing =
   | { kind: 'category'; category: StaffCategory | null }
@@ -24,6 +25,7 @@ export function MenuEditor() {
   const { state, reload } = useRemote(loadCatalog)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [view, setView] = useState<'dishes' | 'groups'>('dishes')
 
   if (state.kind === 'loading') return <div className="skeleton" style={{ height: 240, marginTop: 16 }} />
   if (state.kind === 'error') return <p className="error-text">Не получилось загрузить меню.</p>
@@ -36,6 +38,32 @@ export function MenuEditor() {
   if (editing?.kind === 'category') return <CategoryForm category={editing.category} onDone={done} />
   if (editing?.kind === 'dish') {
     return <DishForm dish={editing.dish} categoryId={editing.categoryId} categories={categories} onDone={done} />
+  }
+
+  const tabs = (
+    <div className="segmented" role="tablist">
+      {(['dishes', 'groups'] as const).map((id) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={view === id}
+          className={view === id ? 'segment active' : 'segment'}
+          onClick={() => setView(id)}
+        >
+          {id === 'dishes' ? 'Блюда' : 'Модификаторы'}
+        </button>
+      ))}
+    </div>
+  )
+  if (view === 'groups') {
+    return (
+      <>
+        <h1 className="title staff-title">Меню</h1>
+        {tabs}
+        <ModifierGroups categories={categories} onChanged={reload} />
+      </>
+    )
   }
 
   const reorderCategories = async (index: number, delta: number) => {
@@ -52,6 +80,7 @@ export function MenuEditor() {
   return (
     <>
       <h1 className="title staff-title">Меню</h1>
+      {tabs}
       <ul className="editor-list">
         {categories.map((category, index) => (
           <li key={category.id} className="editor-category">

@@ -858,3 +858,39 @@ a {
 .danger-text {
   color: var(--error);
 }
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  margin-top: var(--space-3);
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.segment {
+  min-height: 40px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.segment.active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.size-row.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.toggle.nested {
+  padding-left: var(--space-6);
+}
+
+.link-category {
+  border-bottom: 1px solid var(--line);
+}

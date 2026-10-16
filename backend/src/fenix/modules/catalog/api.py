@@ -5,42 +5,53 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.catalog import dish, editor, menu, pricing, seed
+from fenix.modules.catalog import dish, editor, menu, modifier_editor, pricing, seed
 from fenix.modules.catalog.dish import DishDetail, GroupOption, ModifierOption, SizeOption
 from fenix.modules.catalog.editor import CatalogEditError, DishInput, SizeInput
 from fenix.modules.catalog.menu import MenuCategory, MenuDish
 from fenix.modules.catalog.models import Category, Dish
+from fenix.modules.catalog.modifier_editor import GroupInput, GroupLinks, OptionInput
 from fenix.modules.catalog.pricing import InvalidSelectionError, MissingGroup, Price
 
 __all__ = [
     "CatalogEditError",
     "DishDetail",
     "DishInput",
+    "GroupInput",
+    "GroupLinks",
     "GroupOption",
     "InvalidSelectionError",
     "MenuCategory",
     "MenuDish",
     "MissingGroup",
     "ModifierOption",
+    "OptionInput",
     "Price",
     "SizeInput",
     "SizeOption",
     "StaffCategory",
     "StaffDish",
+    "StaffGroup",
+    "StaffOption",
     "StaffSize",
     "create_category",
     "create_dish",
+    "create_group",
     "delete_category",
     "delete_dish",
+    "delete_group",
     "get_dish",
     "get_menu",
+    "list_groups",
     "price",
     "reorder_categories",
     "reorder_dishes",
     "seed_menu",
+    "set_group_links",
     "staff_catalog",
     "update_category",
     "update_dish",
+    "update_group",
 ]
 
 
@@ -184,3 +195,52 @@ async def reorder_dishes(
     session: AsyncSession, category_id: uuid.UUID, ids: list[uuid.UUID]
 ) -> None:
     await editor.reorder_dishes(session, category_id, ids)
+
+
+@dataclass(frozen=True, slots=True)
+class StaffOption:
+    id: uuid.UUID
+    name: str
+    price_delta: int
+
+
+@dataclass(frozen=True, slots=True)
+class StaffGroup:
+    id: uuid.UUID
+    name: str
+    min_choice: int
+    max_choice: int
+    options: list[StaffOption]
+    links: GroupLinks
+
+
+async def list_groups(session: AsyncSession) -> list[StaffGroup]:
+    return [
+        StaffGroup(
+            id=group.id,
+            name=group.name,
+            min_choice=group.min_choice,
+            max_choice=group.max_choice,
+            options=[StaffOption(m.id, m.name, m.price_delta) for m in group.modifiers],
+            links=links,
+        )
+        for group, links in await modifier_editor.list_groups(session)
+    ]
+
+
+async def create_group(session: AsyncSession, data: GroupInput) -> uuid.UUID:
+    """Raises CatalogEditError: choice_bounds, group_needs_option, duplicate_option_name."""
+    return (await modifier_editor.create_group(session, data)).id
+
+
+async def update_group(session: AsyncSession, group_id: uuid.UUID, data: GroupInput) -> None:
+    await modifier_editor.update_group(session, group_id, data)
+
+
+async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
+    await modifier_editor.delete_group(session, group_id)
+
+
+async def set_group_links(session: AsyncSession, group_id: uuid.UUID, links: GroupLinks) -> None:
+    """Replace where the group applies: exactly these dishes and categories."""
+    await modifier_editor.set_links(session, group_id, links)
