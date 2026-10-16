@@ -4,6 +4,13 @@
 	handle /api/* {
 		reverse_proxy api:8000
 	}
+	# Dish and cafe photos from Garage's website endpoint (AD-12); objects are immutable,
+	# so they carry a year-long Cache-Control set at upload.
+	handle_path /media/* {
+		reverse_proxy garage:3902 {
+			header_up Host media
+		}
+	}
 	handle /grafana* {
 		reverse_proxy grafana:3000
 	}

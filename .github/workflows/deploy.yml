@@ -73,7 +73,7 @@ jobs:
       - name: Upload stack definition
         run: |
           rsync -az --delete --exclude .env --exclude .env.example --exclude tg-egress \
-            infra/compose.prod.yaml infra/monitoring \
+            infra/compose.prod.yaml infra/monitoring infra/garage \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/fenix/"
       - name: Roll out
         env:
@@ -94,12 +94,18 @@ jobs:
           [ -n "${SITE_DOMAIN}" ] && set_env SITE_DOMAIN "${SITE_DOMAIN}"
           [ -n "${WEBAPP_URL}" ] && set_env WEBAPP_URL "${WEBAPP_URL}"
           [ -n "${BOOTSTRAP_STAFF_TELEGRAM_USERNAME}" ] && set_env BOOTSTRAP_STAFF_TELEGRAM_USERNAME "${BOOTSTRAP_STAFF_TELEGRAM_USERNAME}"
+          # Secrets that only this server needs: generated once, kept afterwards.
+          ensure_secret() { grep -q "^\$1=." .env || set_env "\$1" "\$2"; }
+          ensure_secret GARAGE_RPC_SECRET "\$(openssl rand -hex 32)"
+          ensure_secret GARAGE_ADMIN_TOKEN "\$(openssl rand -hex 24)"
+          ensure_secret S3_ACCESS_KEY_ID "GK\$(openssl rand -hex 12)"
+          ensure_secret S3_SECRET_ACCESS_KEY "\$(openssl rand -hex 32)"
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
-          # MinIO images are no longer published; that one is preloaded on the server.
-          # A truly missing image still fails at "up".
-          docker compose -f compose.prod.yaml pull --ignore-pull-failures
+          docker compose -f compose.prod.yaml pull
           docker compose -f compose.prod.yaml up -d --remove-orphans
+          # MinIO was replaced by Garage (story 2.5); its data was never used.
+          docker volume rm fenix_minio-data 2>/dev/null || true
           docker logout ghcr.io
           docker image prune -f
           SCRIPT

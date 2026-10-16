@@ -20,18 +20,19 @@ services:
     image: redis:8-alpine
     ports: ["127.0.0.1:6379:6379"]
 
-  minio:
-    # MinIO stopped publishing images (Docker Hub / quay.io deny pulls); this tag
-    # must be preloaded with `docker load`. Replacement is an open decision.
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    pull_policy: missing
-    command: server /data --console-address :9001
+  garage:
+    image: dxflrs/garage:v2.4.1
     environment:
-      MINIO_ROOT_USER: fenix
-      MINIO_ROOT_PASSWORD: fenix-dev-secret
-    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
-    volumes: [minio-data:/data]
+      # Local-only secrets; match the defaults in fenix.platform.config.
+      GARAGE_RPC_SECRET: "0000000000000000000000000000000000000000000000000000000000000001"
+      GARAGE_ADMIN_TOKEN: local-garage-admin-token
+    ports: ["127.0.0.1:3900:3900", "127.0.0.1:3902:3902", "127.0.0.1:3903:3903"]
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
 
 volumes:
   postgres-data:
-  minio-data:
+  garage-meta:
+  garage-data:

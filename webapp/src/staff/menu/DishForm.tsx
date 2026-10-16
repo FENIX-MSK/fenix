@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { api } from '../../api/client'
 import type { DishInput, StaffCategory, StaffDish } from '../../api/types'
+import { PhotoField } from './PhotoField'
 import { kopecksToRubles, rublesToKopecks } from './rubles'
 import { attempt } from './saveError'
 
@@ -33,6 +34,7 @@ export function DishForm({ dish, categoryId, categories, onDone }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState(dish?.photo_url ?? null)
 
   const updateSize = (index: number, patch: Partial<SizeDraft>) =>
     setSizes(sizes.map((size, i) => (i === index ? { ...size, ...patch } : size)))
@@ -79,6 +81,11 @@ export function DishForm({ dish, categoryId, categories, onDone }: Props) {
       }}
     >
       <h2 className="title staff-title">{dish ? 'Блюдо' : 'Новое блюдо'}</h2>
+      {dish ? (
+        <PhotoField dishId={dish.id} photoUrl={photoUrl} onChanged={setPhotoUrl} />
+      ) : (
+        <p className="caption muted">Фото можно добавить после сохранения блюда.</p>
+      )}
       <label className="field">
         <span>Название</span>
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={256} required />

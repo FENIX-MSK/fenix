@@ -227,6 +227,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/dishes/{dish_id}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Dish Photo */
+        post: operations["upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post"];
+        /** Delete Dish Photo */
+        delete: operations["delete_dish_photo_api_v1_staff_dishes__dish_id__photo_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/invitations": {
         parameters: {
             query?: never;
@@ -352,6 +370,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Body_upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post */
+        Body_upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post: {
+            /** File */
+            file: string;
+        };
         /** CategoryIn */
         CategoryIn: {
             /**
@@ -690,6 +713,11 @@ export interface components {
         OrderIn: {
             /** Ids */
             ids: string[];
+        };
+        /** PhotoOut */
+        PhotoOut: {
+            /** Photo Url */
+            photo_url: string;
         };
         /** PriceIn */
         PriceIn: {
@@ -1455,6 +1483,94 @@ export interface operations {
         };
     };
     delete_dish_api_v1_staff_dishes__dish_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dish_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dish_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_dish_photo_api_v1_staff_dishes__dish_id__photo_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhotoOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_dish_photo_api_v1_staff_dishes__dish_id__photo_delete: {
         parameters: {
             query?: never;
             header?: {

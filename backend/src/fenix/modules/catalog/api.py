@@ -1,19 +1,22 @@
 """Public API of `catalog`: functions and DTOs, the only import surface for other modules."""
 
+import asyncio
 import uuid
 from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.catalog import dish, editor, menu, modifier_editor, pricing, seed
+from fenix.modules.catalog import dish, editor, menu, modifier_editor, photos, pricing, seed
 from fenix.modules.catalog.dish import DishDetail, GroupOption, ModifierOption, SizeOption
 from fenix.modules.catalog.editor import CatalogEditError, DishInput, SizeInput
 from fenix.modules.catalog.menu import MenuCategory, MenuDish
 from fenix.modules.catalog.models import Category, Dish
 from fenix.modules.catalog.modifier_editor import GroupInput, GroupLinks, OptionInput
+from fenix.modules.catalog.photos import MAX_UPLOAD_BYTES as MAX_PHOTO_BYTES
 from fenix.modules.catalog.pricing import InvalidSelectionError, MissingGroup, Price
 
 __all__ = [
+    "MAX_PHOTO_BYTES",
     "CatalogEditError",
     "DishDetail",
     "DishInput",
@@ -43,10 +46,12 @@ __all__ = [
     "get_dish",
     "get_menu",
     "list_groups",
+    "prepare_dish_photo",
     "price",
     "reorder_categories",
     "reorder_dishes",
     "seed_menu",
+    "set_dish_photo",
     "set_group_links",
     "staff_catalog",
     "update_category",
@@ -244,3 +249,19 @@ async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
 async def set_group_links(session: AsyncSession, group_id: uuid.UUID, links: GroupLinks) -> None:
     """Replace where the group applies: exactly these dishes and categories."""
     await modifier_editor.set_links(session, group_id, links)
+
+
+async def prepare_dish_photo(dish_id: uuid.UUID, data: bytes) -> tuple[str, bytes]:
+    """A new immutable key and the shrunk WebP. Raises CatalogEditError:
+    image_too_large, unsupported_image."""
+    # Decoding and resizing a 15 MB photo takes a while: keep the event loop free.
+    return photos.new_key(dish_id), await asyncio.to_thread(photos.shrink, data)
+
+
+async def set_dish_photo(session: AsyncSession, dish_id: uuid.UUID, key: str | None) -> None:
+    """Point the dish at an uploaded photo (None removes it)."""
+    dish_row = await session.get(Dish, dish_id)
+    if dish_row is None:
+        raise editor.NotFoundError("dish")
+    dish_row.photo_key = key
+    await session.flush()

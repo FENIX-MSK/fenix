@@ -2,10 +2,11 @@
 
 import uuid
 
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile
 from pydantic import BaseModel, Field
 
 from fenix.http.deps import SessionDep
+from fenix.http.media import StorageDep, photo_url
 from fenix.modules.catalog import api as catalog
 from fenix.platform.errors import ApiError
 
@@ -76,10 +77,6 @@ class OrderIn(BaseModel):
 
 class DishOrderIn(OrderIn):
     category_id: uuid.UUID
-
-
-def photo_url(key: str | None) -> str | None:
-    return f"/media/{key}" if key else None
 
 
 def _rejected(exc: catalog.CatalogEditError) -> ApiError:
@@ -294,5 +291,32 @@ async def set_links(group_id: uuid.UUID, body: LinksIn, session: SessionDep) -> 
         await catalog.set_group_links(
             session, group_id, catalog.GroupLinks(body.dish_ids, body.category_ids)
         )
+    except catalog.CatalogEditError as exc:
+        raise _rejected(exc) from exc
+
+
+class PhotoOut(BaseModel):
+    photo_url: str
+
+
+@router.post("/dishes/{dish_id}/photo")
+async def upload_dish_photo(
+    dish_id: uuid.UUID, file: UploadFile, session: SessionDep, storage: StorageDep
+) -> PhotoOut:
+    data = await file.read(catalog.MAX_PHOTO_BYTES + 1)
+    try:
+        key, webp = await catalog.prepare_dish_photo(dish_id, data)
+        # Stored first: a failed upload leaves the old photo on the dish (EXPERIENCE.md).
+        await storage.put(key, webp, "image/webp")
+        await catalog.set_dish_photo(session, dish_id, key)
+    except catalog.CatalogEditError as exc:
+        raise ApiError(exc.status, exc.code, "The photo was rejected") from exc
+    return PhotoOut(photo_url=f"/media/{key}")
+
+
+@router.delete("/dishes/{dish_id}/photo")
+async def delete_dish_photo(dish_id: uuid.UUID, session: SessionDep) -> None:
+    try:
+        await catalog.set_dish_photo(session, dish_id, None)
     except catalog.CatalogEditError as exc:
         raise _rejected(exc) from exc

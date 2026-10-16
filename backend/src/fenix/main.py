@@ -12,6 +12,7 @@ from fenix.platform.config import Settings, get_settings
 from fenix.platform.db import create_engine, create_session_factory
 from fenix.platform.errors import EXCEPTION_HANDLERS
 from fenix.platform.logging import configure_logging
+from fenix.platform.storage import S3Storage
 
 log = structlog.get_logger()
 
@@ -24,6 +25,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings.database_url)
         app.state.settings = settings
+        app.state.media_storage = S3Storage(settings)
         app.state.session_factory = create_session_factory(engine)
         log.info("app.started", environment=settings.environment)
         try:

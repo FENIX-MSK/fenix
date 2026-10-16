@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from fenix.http.deps import SessionDep
+from fenix.http.media import photo_url
 from fenix.modules.catalog import api as catalog
 from fenix.modules.locations import api as locations
 from fenix.platform.errors import ApiError
@@ -110,8 +111,7 @@ async def get_menu(session: SessionDep) -> MenuOut:
                         price_from=dish.price_from,
                         has_sizes=dish.has_sizes,
                         sold_out=dish.sold_out,
-                        # Photos arrive with the media storage (story 2.5).
-                        photo_url=None,
+                        photo_url=photo_url(dish.photo_key),
                     )
                     for dish in category.dishes
                 ],
@@ -131,7 +131,7 @@ async def get_dish(dish_id: uuid.UUID, session: SessionDep) -> DishOut:
         name=dish.name,
         description=dish.description,
         portion=dish.portion,
-        photo_url=None,
+        photo_url=photo_url(dish.photo_key),
         sizes=[
             SizeOut(id=s.id, name=s.name, price=s.price, portion=s.portion, available=s.available)
             for s in dish.sizes
