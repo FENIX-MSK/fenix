@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 16:52
-last_updated: 10-17-2026 00:42
+last_updated: 10-17-2026 00:44
 project: fenix
 project_key: NOKEY
 tracking_system: file-system
@@ -50,7 +50,7 @@ development_status:
   2-3-редактор-категорий-блюд-и-размеров: review
   2-4-редактор-групп-модификаторов: review
   2-5-фото-блюд-в-хранилище-garage: review
-  2-6-стоп-лист: backlog
+  2-6-стоп-лист: review
   2-7-часы-работы-и-информация-о-кафе: backlog
   epic-2-retrospective: optional
 

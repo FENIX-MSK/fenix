@@ -4,6 +4,7 @@ import { platform } from '../platform'
 import { MenuEditor } from './menu/MenuEditor'
 import { MoreScreen, type MoreSection } from './MoreScreen'
 import { Placeholder } from './Placeholder'
+import { StopList } from './StopList'
 
 type Tab = 'orders' | 'stop-list' | 'menu' | 'more'
 
@@ -29,7 +30,7 @@ export default function StaffApp({ onExit }: Props) {
   let content: ReactNode
   if (tab === 'more') content = <MoreScreen section={section} onOpen={setSection} />
   else if (tab === 'orders') content = <Placeholder title="Заказы" text="Новых заказов нет" />
-  else if (tab === 'stop-list') content = <Placeholder title="Стоп-лист" text="Скоро здесь" />
+  else if (tab === 'stop-list') content = <StopList />
   else content = <MenuEditor />
 
   return (

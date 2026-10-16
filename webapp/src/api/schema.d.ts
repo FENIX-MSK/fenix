@@ -366,6 +366,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/stop-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Stop List */
+        get: operations["get_stop_list_api_v1_staff_stop_list_get"];
+        /** Set Stopped */
+        put: operations["set_stopped_api_v1_staff_stop_list_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -896,6 +914,62 @@ export interface components {
              * @description Kopecks
              */
             price: number;
+        };
+        /** StopDishOut */
+        StopDishOut: {
+            /** Category */
+            category: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Hidden */
+            is_hidden: boolean;
+            /** Name */
+            name: string;
+            /** Sizes */
+            sizes: components["schemas"]["StopItemOut"][];
+        };
+        /** StopGroupOut */
+        StopGroupOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Modifiers */
+            modifiers: components["schemas"]["StopItemOut"][];
+            /** Name */
+            name: string;
+        };
+        /** StopIn */
+        StopIn: {
+            /** Modifier Id */
+            modifier_id?: string | null;
+            /** Size Id */
+            size_id?: string | null;
+            /** Stopped */
+            stopped: boolean;
+        };
+        /** StopItemOut */
+        StopItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Stopped */
+            stopped: boolean;
+        };
+        /** StopListOut */
+        StopListOut: {
+            /** Dishes */
+            dishes: components["schemas"]["StopDishOut"][];
+            /** Groups */
+            groups: components["schemas"]["StopGroupOut"][];
         };
     };
     responses: never;
@@ -1960,6 +2034,90 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LinksIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_stop_list_api_v1_staff_stop_list_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StopListOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_stopped_api_v1_staff_stop_list_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopIn"];
             };
         };
         responses: {

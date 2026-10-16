@@ -5,6 +5,7 @@ import uuid
 from fastapi import APIRouter, UploadFile
 from pydantic import BaseModel, Field
 
+from fenix.http.auth import LocationIdDep
 from fenix.http.deps import SessionDep
 from fenix.http.media import StorageDep, photo_url
 from fenix.modules.catalog import api as catalog
@@ -318,5 +319,72 @@ async def upload_dish_photo(
 async def delete_dish_photo(dish_id: uuid.UUID, session: SessionDep) -> None:
     try:
         await catalog.set_dish_photo(session, dish_id, None)
+    except catalog.CatalogEditError as exc:
+        raise _rejected(exc) from exc
+
+
+class StopItemOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    stopped: bool
+
+
+class StopDishOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    category: str
+    is_hidden: bool
+    sizes: list[StopItemOut]
+
+
+class StopGroupOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    modifiers: list[StopItemOut]
+
+
+class StopListOut(BaseModel):
+    dishes: list[StopDishOut]
+    groups: list[StopGroupOut]
+
+
+class StopIn(BaseModel):
+    size_id: uuid.UUID | None = None
+    modifier_id: uuid.UUID | None = None
+    stopped: bool
+
+
+def _items(items: list[catalog.StopItem]) -> list[StopItemOut]:
+    return [StopItemOut(id=i.id, name=i.name, stopped=i.stopped) for i in items]
+
+
+@router.get("/stop-list")
+async def get_stop_list(session: SessionDep, location_id: LocationIdDep) -> StopListOut:
+    dishes, groups = await catalog.stop_list_view(session, location_id)
+    return StopListOut(
+        dishes=[
+            StopDishOut(
+                id=d.id,
+                name=d.name,
+                category=d.category,
+                is_hidden=d.is_hidden,
+                sizes=_items(d.sizes),
+            )
+            for d in dishes
+        ],
+        groups=[StopGroupOut(id=g.id, name=g.name, modifiers=_items(g.modifiers)) for g in groups],
+    )
+
+
+@router.put("/stop-list")
+async def set_stopped(body: StopIn, session: SessionDep, location_id: LocationIdDep) -> None:
+    try:
+        await catalog.set_stopped(
+            session,
+            location_id,
+            size_id=body.size_id,
+            modifier_id=body.modifier_id,
+            stopped=body.stopped,
+        )
     except catalog.CatalogEditError as exc:
         raise _rejected(exc) from exc

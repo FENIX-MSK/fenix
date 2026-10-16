@@ -6,7 +6,16 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.catalog import dish, editor, menu, modifier_editor, photos, pricing, seed
+from fenix.modules.catalog import (
+    dish,
+    editor,
+    menu,
+    modifier_editor,
+    photos,
+    pricing,
+    seed,
+    stop_list,
+)
 from fenix.modules.catalog.dish import DishDetail, GroupOption, ModifierOption, SizeOption
 from fenix.modules.catalog.editor import CatalogEditError, DishInput, SizeInput
 from fenix.modules.catalog.menu import MenuCategory, MenuDish
@@ -14,6 +23,7 @@ from fenix.modules.catalog.models import Category, Dish
 from fenix.modules.catalog.modifier_editor import GroupInput, GroupLinks, OptionInput
 from fenix.modules.catalog.photos import MAX_UPLOAD_BYTES as MAX_PHOTO_BYTES
 from fenix.modules.catalog.pricing import InvalidSelectionError, MissingGroup, Price
+from fenix.modules.catalog.stop_list import StopDish, StopGroup, StopItem
 
 __all__ = [
     "MAX_PHOTO_BYTES",
@@ -37,6 +47,9 @@ __all__ = [
     "StaffGroup",
     "StaffOption",
     "StaffSize",
+    "StopDish",
+    "StopGroup",
+    "StopItem",
     "create_category",
     "create_dish",
     "create_group",
@@ -53,7 +66,9 @@ __all__ = [
     "seed_menu",
     "set_dish_photo",
     "set_group_links",
+    "set_stopped",
     "staff_catalog",
+    "stop_list_view",
     "update_category",
     "update_dish",
     "update_group",
@@ -265,3 +280,24 @@ async def set_dish_photo(session: AsyncSession, dish_id: uuid.UUID, key: str | N
         raise editor.NotFoundError("dish")
     dish_row.photo_key = key
     await session.flush()
+
+
+async def stop_list_view(
+    session: AsyncSession, location_id: uuid.UUID
+) -> tuple[list[StopDish], list[StopGroup]]:
+    """Every size and modifier with its stop-list state at the location."""
+    return await stop_list.view(session, location_id)
+
+
+async def set_stopped(
+    session: AsyncSession,
+    location_id: uuid.UUID,
+    *,
+    size_id: uuid.UUID | None = None,
+    modifier_id: uuid.UUID | None = None,
+    stopped: bool,
+) -> None:
+    """Take a size or a modifier off sale (or back). Idempotent."""
+    await stop_list.set_stopped(
+        session, location_id, size_id=size_id, modifier_id=modifier_id, stopped=stopped
+    )
