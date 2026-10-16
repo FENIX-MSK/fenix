@@ -24,6 +24,8 @@ IMMUTABLE = "public, max-age=31536000, immutable"
 class MediaStorage(Protocol):
     async def put(self, key: str, body: bytes, content_type: str) -> None: ...
 
+    async def delete(self, key: str) -> None: ...
+
 
 class S3Storage:
     def __init__(self, settings: Settings) -> None:
@@ -46,6 +48,9 @@ class S3Storage:
             ContentType=content_type,
             CacheControl=IMMUTABLE,
         )
+
+    async def delete(self, key: str) -> None:
+        await asyncio.to_thread(self.client.delete_object, Bucket=self.bucket, Key=key)
 
 
 @dataclass

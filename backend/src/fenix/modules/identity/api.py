@@ -32,8 +32,10 @@ __all__ = [
     "ensure_user",
     "find_user",
     "find_user_by_username",
+    "grant_staff",
     "is_staff",
     "list_staff",
+    "remove_staff_membership",
 ]
 
 
@@ -160,3 +162,15 @@ async def disable_staff(
 ) -> None:
     """Revoke access at once. Raises StaffMemberNotFoundError, LastStaffMemberError."""
     await staff.disable_staff(session, location_id, user_id, now)
+
+
+async def grant_staff(session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID) -> None:
+    """Server-side grant without an invitation (smoke test, operations)."""
+    await staff.add_member(session, user_id, location_id)
+
+
+async def remove_staff_membership(
+    session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID
+) -> None:
+    """Delete the membership row entirely, leaving no trace in the staff list."""
+    await staff.remove_member(session, user_id, location_id)

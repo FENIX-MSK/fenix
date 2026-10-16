@@ -1002,22 +1002,27 @@ a {
 }
 
 .hours-edit {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
-  flex-wrap: wrap;
+}
+
+.hours-edit .toggle {
+  gap: var(--space-2);
 }
 
 .hours-inputs {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 2px;
 }
 
 .hours-inputs input {
+  width: 5.2em;
   min-height: 40px;
-  padding: 0 var(--space-2);
+  padding: 0 2px;
+  font-size: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);

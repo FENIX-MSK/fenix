@@ -7,6 +7,7 @@ data signed by the bot token from the environment. Prints only check names and
 statuses: no tokens, no launch data, no personal data.
 """
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -14,11 +15,16 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlencode
 
+from fenix.modules.identity import api as identity
+from fenix.modules.locations import api as locations
 from fenix.platform.config import get_settings
+from fenix.platform.db import create_engine, create_session_factory
+from fenix.platform.storage import S3Storage
 
 # A synthetic Telegram account: real ids are positive, this one cannot collide.
 SMOKE_USER = {"id": 1, "first_name": "Smoke", "username": "fenix_smoke"}
@@ -130,11 +136,72 @@ CHECKS: list[tuple[str, Callable[[Client], None]]] = [
 ]
 
 
+def check_staff_section(client: Client) -> None:
+    catalog = client.get("/api/v1/staff/catalog")
+    expect(len(catalog["categories"]) >= 10, "staff catalog is empty")
+    members = client.get("/api/v1/staff/members")
+    expect(any(m["is_me"] for m in members), "smoke user is not in the staff list")
+    stop_list = client.get("/api/v1/staff/stop-list")
+    size = next(s for d in stop_list["dishes"] for s in d["sizes"] if not s["stopped"])
+    # Reversible: off and straight back on.
+    for stopped in (True, False):
+        status, _ = client.request(
+            "PUT", "/api/v1/staff/stop-list", {"size_id": size["id"], "stopped": stopped}
+        )
+        expect(status == 200, f"stop-list toggle -> {status}")
+
+
+def fetch(url: str) -> tuple[bytes, str]:
+    request = urllib.request.Request(url)  # noqa: S310 - our own public URL
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:  # noqa: S310
+        return response.read(), response.headers.get("Cache-Control", "")
+
+
+async def check_media(client: Client) -> None:
+    """Garage behind Caddy: an object put over S3 is served from /media/."""
+    storage = S3Storage(get_settings())
+    key = f"smoke/{uuid.uuid4()}.txt"
+    await storage.put(key, b"smoke", "text/plain")
+    try:
+        body, cache = await asyncio.to_thread(fetch, f"{client.base_url}/media/{key}")
+        expect(body == b"smoke", "media body differs")
+        expect("immutable" in cache, "no long cache")
+    finally:
+        await storage.delete(key)
+
+
+async def as_staff(check: Callable[[Client], None], client: Client) -> None:
+    """Run a staff check with a temporary membership that is always removed."""
+    engine = create_engine(get_settings().database_url)
+    factory = create_session_factory(engine)
+    try:
+        async with factory() as session, session.begin():
+            user = await identity.find_user(
+                session, identity.Platform.TELEGRAM, str(SMOKE_USER["id"])
+            )
+            location_id = await locations.get_default_location_id(session)
+            if user is None or location_id is None:
+                raise SmokeError("smoke user or location missing")
+            await identity.grant_staff(session, user.id, location_id)
+        try:
+            await asyncio.to_thread(check, client)
+        finally:
+            async with factory() as session, session.begin():
+                await identity.remove_staff_membership(session, user.id, location_id)
+    finally:
+        await engine.dispose()
+
+
 def run(base_url: str) -> bool:
     token = get_settings().telegram_bot_token.get_secret_value()
     client = Client(base_url, signed_init_data(token))
     ok = True
-    for name, check in CHECKS:
+    checks: list[tuple[str, Callable[[Client], None]]] = [
+        *CHECKS,
+        ("staff-section", lambda c: asyncio.run(as_staff(check_staff_section, c))),
+        ("media", lambda c: asyncio.run(check_media(c))),
+    ]
+    for name, check in checks:
         try:
             check(client)
         # Report every failing check, then fail.

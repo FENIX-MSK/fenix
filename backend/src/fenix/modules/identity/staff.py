@@ -5,7 +5,7 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import exists, func, select, update
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 
@@ -167,3 +167,12 @@ async def disable_staff(
     membership.is_active = False
     membership.disabled_at = now
     await session.flush()
+
+
+async def remove_member(session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID) -> None:
+    """Delete the membership row outright (the smoke test cleans up after itself)."""
+    await session.execute(
+        delete(StaffMembership).where(
+            StaffMembership.user_id == user_id, StaffMembership.location_id == location_id
+        )
+    )
