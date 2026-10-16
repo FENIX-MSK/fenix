@@ -32,9 +32,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
-  # TELEGRAM_BOT_MODE stays "polling" (the default) so the API never registers a
-  # webhook: updates are consumed by the "bot" service, and Telegram cannot
-  # reliably reach this VPS anyway.
+  # Telegram updates are consumed only by the "bot" service (long polling, AD-8).
   api:
     <<: *backend
     depends_on:
@@ -135,7 +133,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_SERVER_ROOT_URL: https://${SITE_ADDRESS}/grafana/
+      GF_SERVER_ROOT_URL: https://${SITE_DOMAIN}/grafana/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:

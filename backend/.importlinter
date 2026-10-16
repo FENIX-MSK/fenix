@@ -24,6 +24,7 @@ source_modules =
     fenix.worker
     fenix.main
     fenix.seed
+    fenix.smoke
 forbidden_modules =
     fenix.modules.*.*
 ignore_imports =
@@ -46,6 +47,8 @@ forbidden_modules =
     fenix.worker
     fenix.main
     fenix.seed
+    fenix.smoke
+    fenix.smoke
     aiogram
 
 # AD-1: platform is the bottom layer.
@@ -61,3 +64,4 @@ forbidden_modules =
     fenix.worker
     fenix.main
     fenix.seed
+    fenix.smoke

@@ -76,10 +76,22 @@ jobs:
             infra/compose.prod.yaml infra/monitoring \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/fenix/"
       - name: Roll out
+        env:
+          # Public addresses live in the `production` environment variables, so moving
+          # to another domain is a variable change plus a deploy.
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
+          WEBAPP_URL: ${{ vars.WEBAPP_URL }}
         run: |
           ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s <<SCRIPT
           set -euo pipefail
           cd /opt/fenix
+          set_env() {
+            if grep -q "^\$1=" .env; then sed -i "s|^\$1=.*|\$1=\$2|" .env; else echo "\$1=\$2" >> .env; fi
+          }
+          [ -n "${SITE_ADDRESS}" ] && set_env SITE_ADDRESS '"${SITE_ADDRESS}"'
+          [ -n "${SITE_DOMAIN}" ] && set_env SITE_DOMAIN "${SITE_DOMAIN}"
+          [ -n "${WEBAPP_URL}" ] && set_env WEBAPP_URL "${WEBAPP_URL}"
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
           # MinIO images are no longer published; that one is preloaded on the server.
@@ -88,4 +100,20 @@ jobs:
           docker compose -f compose.prod.yaml up -d --remove-orphans
           docker logout ghcr.io
           docker image prune -f
+          SCRIPT
+
+      - name: Smoke test the stand
+        env:
+          WEBAPP_URL: ${{ vars.WEBAPP_URL }}
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s <<SCRIPT
+          set -euo pipefail
+          cd /opt/fenix
+          for attempt in \$(seq 1 30); do
+            if docker compose -f compose.prod.yaml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)" 2>/dev/null; then break; fi
+            sleep 5
+          done
+          # Through the public URL: Caddy, TLS, API and database together.
+          docker compose -f compose.prod.yaml exec -T api fenix-smoke "${WEBAPP_URL}"
+          docker compose -f compose.prod.yaml ps --format "{{.Service}} {{.State}} {{.Status}}"
           SCRIPT
