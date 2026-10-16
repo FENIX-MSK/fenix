@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Феникс — ключевые экраны</title>
+<link href="https://fonts.googleapis.com/css2?family=Tenor+Sans&display=swap&subset=cyrillic" rel="stylesheet">
+<style>
+  /* Tokens from DESIGN.md (palette B) */
+  .light { --bg:#F7EFE3; --surface:#FFFFFF; --sunken:#EFE4D4; --text:#3A0B0E; --muted:#74574A; --accent:#731419; --on-accent:#F7EFE3; --gold:#B8894A; --gold-text:#8A6430; --line:#E2CFB6; }
+  .dark  { --bg:#2B0B0E; --surface:#3E1216; --sunken:#220809; --text:#F3E6D0; --muted:#BFA088; --accent:#D4A96A; --on-accent:#2B0B0E; --gold:#D4A96A; --gold-text:#D4A96A; --line:#5A2A28; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: #DAD5CE; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #222; }
+  h1 { font-size: 22px; margin: 0 0 4px; } .lead { margin: 0 0 20px; color: #444; }
+  .row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .cap { font-size: 13px; color: #333; margin: 0 0 6px; font-weight: 600; }
+  .phone { width: 340px; min-height: 640px; border-radius: 28px; overflow: hidden; position: relative; background: var(--bg); color: var(--text); box-shadow: 0 6px 20px rgba(0,0,0,.18); font-size: 15px; }
+  .tg { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 14px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .pad { padding: 14px 16px; }
+  .disp { font-family: "Tenor Sans", system-ui, sans-serif; text-transform: uppercase; letter-spacing: .14em; color: var(--accent); }
+  .logo { font-size: 28px; margin: 0; }
+  .rays { height: 10px; margin: 6px 0 2px; background: repeating-linear-gradient(90deg, var(--gold) 0 1px, transparent 1px 7px); opacity: .7; border-radius: 2px; }
+  .status { font-size: 12px; color: var(--muted); }
+  .banner { margin: 12px 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--gold); color: var(--gold-text); font-size: 13px; }
+  .chips { display: flex; gap: 8px; overflow: hidden; margin: 8px 0 12px; }
+  .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; white-space: nowrap; }
+  .chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .sec { font-family: "Tenor Sans", system-ui, sans-serif; text-transform: uppercase; letter-spacing: .14em; font-size: 14px; color: var(--accent); margin: 6px 0 8px; }
+  .card { display: flex; gap: 12px; background: var(--surface); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .ph { width: 72px; height: 72px; border-radius: 6px; flex: none; background: radial-gradient(circle at 50% 120%, var(--gold) 0 18%, transparent 19%), repeating-conic-gradient(from 270deg at 50% 100%, var(--sunken) 0 6deg, var(--surface) 6deg 12deg); }
+  .card b { display: block; font-weight: 600; }
+  .card small { display: block; color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+  .price { font-weight: 600; color: var(--accent); }
+  .off { opacity: .55; } .tag { font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-left: 6px; color: var(--muted); }
+  .cartbar { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 14px; border-radius: 12px; background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 70px; background: var(--surface); border-radius: 20px 20px 0 0; padding: 16px; }
+  .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 0 auto 12px; }
+  .bigph { height: 150px; border-radius: 12px; margin-bottom: 12px; background: radial-gradient(circle at 50% 115%, var(--gold) 0 14%, transparent 15%), repeating-conic-gradient(from 270deg at 50% 100%, var(--sunken) 0 5deg, var(--surface) 5deg 10deg); }
+  .grp { margin: 12px 0 4px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+  .opt { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); display: inline-block; vertical-align: middle; margin-right: 10px; }
+  .dot.on { border-color: var(--accent); box-shadow: inset 0 0 0 4px var(--surface); background: var(--accent); }
+  .box { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--line); display: inline-block; vertical-align: middle; margin-right: 10px; }
+  .box.on { background: var(--accent); border-color: var(--accent); }
+  .mainbtn { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px; background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 600; }
+  .seg { display: flex; background: var(--sunken); border-radius: 12px; padding: 4px; margin: 8px 0 14px; }
+  .seg span { flex: 1; text-align: center; padding: 8px; border-radius: 9px; font-size: 14px; }
+  .seg .on { background: var(--surface); font-weight: 600; }
+  .field { background: var(--surface); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; }
+  .field small { display: block; font-size: 11px; color: var(--muted); }
+  .check { font-size: 13px; color: var(--muted); margin: 10px 0; }
+  .num { font-family: "Tenor Sans", system-ui, sans-serif; font-size: 40px; letter-spacing: .08em; color: var(--accent); text-align: center; margin: 18px 0 2px; }
+  .steps { display: flex; justify-content: space-between; margin: 20px 0 6px; position: relative; }
+  .steps::before { content: ""; position: absolute; left: 10px; right: 10px; top: 9px; height: 2px; background: var(--line); }
+  .st { position: relative; text-align: center; font-size: 11px; color: var(--muted); width: 25%; }
+  .st i { display: block; width: 20px; height: 20px; margin: 0 auto 6px; border-radius: 50%; background: var(--line); }
+  .st.done i, .st.now i { background: var(--accent); } .st.now { color: var(--text); font-weight: 600; }
+  .tablet { width: 860px; max-width: 100%; min-height: 520px; border-radius: 22px; overflow: hidden; background: var(--bg); color: var(--text); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+  .cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 12px; }
+  .colh { font-size: 13px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .oc { background: var(--surface); border-radius: 16px; padding: 12px; margin-bottom: 10px; font-size: 13px; }
+  .oc.new { outline: 2px solid var(--accent); }
+  .oc .n { font-family: "Tenor Sans", system-ui, sans-serif; font-size: 20px; letter-spacing: .08em; }
+  .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 11px; }
+  .b-new { background:#F6DEDB; color:#731419; } .b-cook { background:#F8E6C4; color:#7A4A00; } .b-ready { background:#DCEFD9; color:#1E5B2E; } .b-del { background:#DCE8F5; color:#1F4E79; }
+  .oc ul { margin: 8px 0; padding-left: 16px; } .oc li small { color: var(--muted); }
+  .act { display: block; text-align: center; padding: 12px; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 600; min-height: 48px; }
+  .nav { display: flex; justify-content: space-around; border-top: 1px solid var(--line); padding: 10px; font-size: 12px; color: var(--muted); }
+  .nav b { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>Ключевые экраны — Феникс бистро</h1>
+<p class="lead">Макеты по DESIGN.md и EXPERIENCE.md. При расхождении правы документы. Фото блюд — заглушки.</p>
+
+<div class="row">
+  <div><p class="cap">1. Меню · светлая тема</p>
+    <div class="phone light">
+      <div class="tg"><span>✕ Закрыть</span><span>Феникс бистро</span><span>⋯</span></div>
+      <div class="pad">
+        <p class="disp logo">Феникс</p><div class="rays"></div>
+        <div class="status">Бистро · Открыто до 22:00</div>
+        <div class="banner">Скидка 10% в день рождения — при оплате на месте</div>
+        <div class="chips"><span class="chip on">Роллы</span><span class="chip">Сеты</span><span class="chip">Пицца</span><span class="chip">Бургеры</span><span class="chip">Кофе</span></div>
+        <div class="sec">Роллы</div>
+        <div class="card"><div class="ph"></div><div><b>Калифорния с крабом</b><small>рис, снежный краб, икра тобико, нори, огурец · 155 г</small><span class="price">599 ₽</span></div></div>
+        <div class="card"><div class="ph"></div><div><b>Филадельфия</b><small>рис, лосось, нори, огурец, творожный сыр · 170 г</small><span class="price">699 ₽</span></div></div>
+        <div class="card off"><div class="ph"></div><div><b>Дракон</b><small>авокадо, тигровая креветка, соус унаги · 200 г</small><span class="price">599 ₽</span><span class="tag">Закончилось</span></div></div>
+      </div>
+      <div class="cartbar">Корзина · 1 298 ₽</div>
+    </div></div>
+
+  <div><p class="cap">2. Лист блюда · тёмная тема</p>
+    <div class="phone dark">
+      <div class="tg"><span>‹ Назад</span><span>Феникс бистро</span><span>⋯</span></div>
+      <div class="sheet"><div class="grab"></div><div class="bigph"></div>
+        <b style="font-size:18px">Капучино</b>
+        <div class="grp"><span>Размер</span><span>обязательно</span></div>
+        <div class="opt"><span><span class="dot"></span>250 мл</span><span>200 ₽</span></div>
+        <div class="opt"><span><span class="dot on"></span>400 мл</span><span>250 ₽</span></div>
+        <div class="grp"><span>Добавки</span><span>по желанию</span></div>
+        <div class="opt"><span><span class="box on"></span>Сироп</span><span>+30 ₽</span></div>
+        <div class="opt"><span><span class="box"></span>Альтернативное молоко</span><span>+100 ₽</span></div>
+      </div>
+      <div class="mainbtn">Добавить · 280 ₽</div>
+    </div></div>
+
+  <div><p class="cap">3. Оформление · светлая тема</p>
+    <div class="phone light">
+      <div class="tg"><span>‹ Назад</span><span>Оформление</span><span>⋯</span></div>
+      <div class="pad">
+        <div class="seg"><span class="on">Самовывоз</span><span>Доставка</span></div>
+        <div class="field"><small>Когда</small>Как можно скорее · ≈20 мин</div>
+        <div class="field"><small>Имя</small>Анна</div>
+        <div class="field"><small>Телефон</small><span style="color:var(--accent)">Поделиться контактом</span></div>
+        <div class="field"><small>Оплата</small>Онлайн · наличные · картой на кассе</div>
+        <div class="check">☐ У меня день рождения — скидка 10% при оплате на месте</div>
+        <div class="check">☑ Я согласна с политикой конфиденциальности</div>
+        <div class="field" style="display:flex;justify-content:space-between"><span>Итого</span><b>499 ₽</b></div>
+      </div>
+      <div class="mainbtn">Оплатить · 499 ₽</div>
+    </div></div>
+
+  <div><p class="cap">4. Заказ · тёмная тема</p>
+    <div class="phone dark">
+      <div class="tg"><span>✕ Закрыть</span><span>Ваш заказ</span><span>⋯</span></div>
+      <div class="pad">
+        <div class="num">#047</div>
+        <div style="text-align:center;color:var(--muted);font-size:13px">Самовывоз · оплачено онлайн</div>
+        <div class="steps"><div class="st done"><i></i>Принят</div><div class="st now"><i></i>Готовится</div><div class="st"><i></i>Готов</div><div class="st"><i></i>Выдан</div></div>
+        <div style="text-align:center;margin:14px 0 18px">Будет готов к <b>9:20</b></div>
+        <div class="card"><div><b>Капучино 400 мл</b><small>сироп</small></div><span class="price" style="margin-left:auto">280 ₽</span></div>
+        <div class="card"><div><b>Сырники со сметаной</b><small>1 шт</small></div><span class="price" style="margin-left:auto">219 ₽</span></div>
+      </div>
+    </div></div>
+</div>
+
+<p class="cap" style="margin-top:28px">5. Доска заказов персонала · планшет · светлая тема</p>
+<div class="tablet light">
+  <div class="tg"><span class="disp" style="font-size:16px">Феникс · Персонал</span><span>Открыто до 22:00 · 🔔 звук включён</span><span>Запланированные (2)</span></div>
+  <div class="cols">
+    <div><div class="colh"><span>Новые</span><span>1</span></div>
+      <div class="oc new"><span class="n">#048</span> <span class="badge b-new">Новый</span><div style="color:var(--muted)">Самовывоз · как можно скорее · 9:14</div>
+        <ul><li>Бургер Классик <small>· мраморная котлета</small></li><li>Картофель фри Б</li><li>Кола 330 мл</li></ul>
+        <div style="color:var(--muted)">Оплата на месте · 948 ₽</div><span class="act" style="margin-top:8px">Принять</span></div></div>
+    <div><div class="colh"><span>Готовятся</span><span>1</span></div>
+      <div class="oc"><span class="n">#047</span> <span class="badge b-cook">Готовится</span><div style="color:var(--muted)">Самовывоз · к 9:20</div>
+        <ul><li>Капучино 400 мл <small>· сироп</small></li><li>Сырники со сметаной</li></ul>
+        <div style="color:var(--muted)">Оплачено онлайн · 499 ₽</div><span class="act" style="margin-top:8px">Готов</span></div></div>
+    <div><div class="colh"><span>Готовы</span><span>1</span></div>
+      <div class="oc"><span class="n">#045</span> <span class="badge b-ready">Готов</span><div style="color:var(--muted)">Самовывоз</div>
+        <ul><li>Сет Калифорния</li></ul>
+        <div style="color:#8A6430">🎂 День рождения — проверить документ</div><span class="act" style="margin-top:8px">Выдать</span></div></div>
+    <div><div class="colh"><span>В доставке</span><span>1</span></div>
+      <div class="oc"><span class="n">#044</span> <span class="badge b-del">В пути</span><div style="color:var(--muted)">Корпус 3, кв. 112 · сдача с 5000</div>
+        <ul><li>Пицца Пепперони</li><li>Сет Унаги</li></ul><span class="act" style="margin-top:8px">Доставлен</span></div></div>
+  </div>
+  <div class="nav"><b>Заказы</b><span>Стоп-лист</span><span>Меню</span><span>Ещё</span></div>
+</div>
+</body>
+</html>
