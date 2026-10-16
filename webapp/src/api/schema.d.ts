@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Location */
+        get: operations["get_location_api_v1_location_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -68,6 +85,24 @@ export interface components {
              */
             status: "ok";
         };
+        /** LocationOut */
+        LocationOut: {
+            /** Address */
+            address: string;
+            /** Description */
+            description: string;
+            /** Map Url */
+            map_url: string;
+            /** Name */
+            name: string;
+            /** Opening Hours */
+            opening_hours: components["schemas"]["OpeningHoursOut"][];
+            /** Phone */
+            phone: string;
+            /** Social Links */
+            social_links: components["schemas"]["SocialLinkOut"][];
+            status: components["schemas"]["OpeningStatusOut"];
+        };
         /** Me */
         Me: {
             /** First Name */
@@ -77,6 +112,47 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /** OpeningHoursOut */
+        OpeningHoursOut: {
+            /**
+             * Closes At
+             * @description Local time, H:MM; not after opens_at means past midnight
+             */
+            closes_at: string;
+            /**
+             * Opens At
+             * @description Local time, H:MM
+             */
+            opens_at: string;
+            /**
+             * Weekday
+             * @description 0 = Monday
+             */
+            weekday: number;
+        };
+        /** OpeningStatusOut */
+        OpeningStatusOut: {
+            /** Closes At */
+            closes_at: string | null;
+            /** Is Open */
+            is_open: boolean;
+            /** Opens At */
+            opens_at: string | null;
+            /**
+             * Text
+             * @description Ready to show, e.g. «Открыто до 22:00»
+             */
+            text: string;
+        };
+        /** SocialLinkOut */
+        SocialLinkOut: {
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
         };
     };
     responses: never;
@@ -103,6 +179,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_location_api_v1_location_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

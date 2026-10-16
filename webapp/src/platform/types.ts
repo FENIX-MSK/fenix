@@ -17,4 +17,14 @@ export interface Platform {
   getUser(): PlatformUser | null
   /** Signed launch data the backend validates; null outside a messenger. */
   getInitDataRaw(): string | null
+  /** The messenger's color scheme (the system one in a browser). */
+  isDark(): boolean
+  /** Paint the messenger's header and background to match the screen. */
+  setColors(background: string): void
+  /** Whether the messenger draws its own back button; otherwise screens show one. */
+  readonly hasNativeBackButton: boolean
+  /** Show the native back button; the returned function hides it again. */
+  showBackButton(onBack: () => void): () => void
+  /** Open an external link (maps, social networks) outside the Mini App. */
+  openLink(url: string): void
 }

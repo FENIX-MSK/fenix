@@ -23,6 +23,7 @@ source_modules =
     fenix.telegram
     fenix.worker
     fenix.main
+    fenix.seed
 forbidden_modules =
     fenix.modules.*.*
 ignore_imports =
@@ -30,6 +31,7 @@ ignore_imports =
     fenix.telegram.** -> fenix.modules.*.api
     fenix.worker -> fenix.modules.*.api
     fenix.main -> fenix.modules.*.api
+    fenix.seed -> fenix.modules.*.api
 unmatched_ignore_imports_alerting = none
 
 # AD-1, AD-8: modules sit below the adapters and know nothing about the messenger.
@@ -43,6 +45,7 @@ forbidden_modules =
     fenix.telegram
     fenix.worker
     fenix.main
+    fenix.seed
     aiogram
 
 # AD-1: platform is the bottom layer.
@@ -57,3 +60,4 @@ forbidden_modules =
     fenix.telegram
     fenix.worker
     fenix.main
+    fenix.seed

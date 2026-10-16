@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
-from fenix.http import me
+from fenix.http import location, me
 from fenix.http.auth import current_user
 from fenix.platform.errors import ErrorResponse
 
@@ -18,3 +18,4 @@ api_v1 = APIRouter(
     },
 )
 api_v1.include_router(me.router)
+api_v1.include_router(location.router)

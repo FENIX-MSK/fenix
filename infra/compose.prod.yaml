@@ -26,7 +26,8 @@ services:
 
   migrate:
     <<: *backend
-    command: ["alembic", "upgrade", "head"]
+    # Initial data is idempotent: it only fills what does not exist yet.
+    command: ["sh", "-c", "alembic upgrade head && fenix-seed"]
     restart: "no"
     depends_on:
       postgres: { condition: service_healthy }

@@ -1,28 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { api } from './api/client'
+import { AboutScreen } from './guest/AboutScreen'
+import { Header } from './guest/Header'
+import { useLocationInfo } from './guest/useLocationInfo'
 import { platform } from './platform'
 
-type ApiStatus = 'checking' | 'ok' | 'unavailable'
+type Screen = 'menu' | 'about'
+
+function useTheme() {
+  useEffect(() => {
+    const dark = platform.isDark()
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    // The messenger's header matches the screen background (EXPERIENCE.md › Responsive).
+    platform.setColors(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim())
+  }, [])
+}
 
 export default function App() {
-  const user = platform.getUser()
-  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking')
+  useTheme()
+  const [screen, setScreen] = useState<Screen>('menu')
+  const { state: location, reload } = useLocationInfo()
+  const openMenu = useCallback(() => setScreen('menu'), [])
 
-  useEffect(() => {
-    api
-      .GET('/api/health')
-      .then(({ data }) => setApiStatus(data?.status === 'ok' ? 'ok' : 'unavailable'))
-      .catch(() => setApiStatus('unavailable'))
-  }, [])
-
+  if (screen === 'about') {
+    return <AboutScreen location={location} onBack={openMenu} onRetry={reload} />
+  }
   return (
-    <main className="app">
-      <h1>Феникс бистро</h1>
-      <p>{user ? `Привет, ${user.firstName}!` : 'Откройте приложение из Telegram-бота.'}</p>
-      <p className="muted">
-        Платформа: {platform.name} · API: {apiStatus}
-      </p>
-    </main>
+    <div className="screen">
+      <Header location={location} onAbout={() => setScreen('about')} />
+      <main className="menu-placeholder muted">Меню появится здесь.</main>
+    </div>
   )
 }

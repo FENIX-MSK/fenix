@@ -25,6 +25,7 @@ dependencies = [
 [project.scripts]
 fenix-bot-polling = "fenix.telegram.polling:main"
 fenix-openapi = "fenix.http.openapi:main"
+fenix-seed = "fenix.seed:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

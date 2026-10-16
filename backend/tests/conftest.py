@@ -21,7 +21,9 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 BACKEND = Path(__file__).resolve().parent.parent
 
-import fenix.modules.identity.models  # noqa: E402, F401  # registers tables in Base.metadata
+# Register every module's tables in Base.metadata.
+import fenix.modules.identity.models  # noqa: E402
+import fenix.modules.locations.models  # noqa: E402, F401
 from fenix.platform.db import Base, create_engine, create_session_factory  # noqa: E402
 
 
@@ -70,3 +72,10 @@ async def session_factory(
         yield create_session_factory(engine)
     finally:
         await engine.dispose()
+
+
+@pytest.fixture
+def auth_headers() -> dict[str, str]:
+    from init_data import sign_init_data
+
+    return {"Authorization": f"tma {sign_init_data()}"}
