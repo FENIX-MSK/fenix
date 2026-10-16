@@ -7,6 +7,7 @@ import asyncio
 
 import structlog
 
+from fenix.modules.catalog import api as catalog
 from fenix.modules.locations import api as locations
 from fenix.platform.config import get_settings
 from fenix.platform.db import create_engine, create_session_factory
@@ -21,8 +22,8 @@ async def run() -> None:
     engine = create_engine(settings.database_url)
     try:
         async with create_session_factory(engine)() as session, session.begin():
-            created = await locations.seed_defaults(session)
-            log.info("seed.locations", created=created)
+            log.info("seed.locations", created=await locations.seed_defaults(session))
+            log.info("seed.catalog", created=await catalog.seed_menu(session))
     finally:
         await engine.dispose()
 

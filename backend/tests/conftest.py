@@ -22,6 +22,7 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 BACKEND = Path(__file__).resolve().parent.parent
 
 # Register every module's tables in Base.metadata.
+import fenix.modules.catalog.models  # noqa: E402
 import fenix.modules.identity.models  # noqa: E402
 import fenix.modules.locations.models  # noqa: E402, F401
 from fenix.platform.db import Base, create_engine, create_session_factory  # noqa: E402

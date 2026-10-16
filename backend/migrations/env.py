@@ -12,6 +12,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import model modules here as they appear so autogenerate sees them.
+import fenix.modules.catalog.models  # noqa: E402
 import fenix.modules.identity.models  # noqa: E402
 import fenix.modules.locations.models  # noqa: F401, E402
 
