@@ -1,0 +1,20 @@
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /telegram/webhook {
+		reverse_proxy api:8000
+	}
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
+	# Mini App: single-page app, unknown paths fall back to index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

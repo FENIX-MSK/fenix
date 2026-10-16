@@ -69,7 +69,7 @@
 
 ## Техника
 
-- Бэкенд: Python 3.13, FastAPI, aiogram 3, SQLAlchemy 2 (async), Alembic, PostgreSQL, Redis, фоновый воркер; uv, ruff, mypy, pytest.
+- Бэкенд: Python 3.14 (3.13 не скачивался из-за сети; 3.14 — стабильная ветка), FastAPI, aiogram 3, SQLAlchemy 2 (async), Alembic, PostgreSQL, Redis, фоновый воркер; uv, ruff, mypy, pytest.
 - Архитектура — модульный монолит; transactional outbox для уведомлений; идемпотентность платежей.
 - Фронтенд Mini App: React + TypeScript + Vite, `@telegram-apps/sdk` за собственной обёрткой (под будущий MAX).
 - Хранилище файлов: MinIO (S3).

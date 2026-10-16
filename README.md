@@ -7,7 +7,11 @@ Telegram bot + Mini App for «Феникс бистро»: menu, cart, ordering 
 - `webapp/` — Telegram Mini App (React + TypeScript + Vite)
 - `infra/` — Docker Compose, Caddy, monitoring
 
-See [docs/decisions.md](docs/decisions.md) for agreed requirements.
+See [docs/decisions.md](docs/decisions.md) for agreed requirements and
+[infra/README.md](infra/README.md) for running locally and deploying.
+
+Specs follow the BMAD Method (`_bmad/`, skills in `.claude/skills/`); planning and
+implementation artifacts live in `docs/`.
 
 ## Branches
 

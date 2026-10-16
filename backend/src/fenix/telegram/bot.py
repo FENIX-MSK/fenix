@@ -1,0 +1,28 @@
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.types import MenuButtonWebApp, WebAppInfo
+
+from fenix.config import Settings
+from fenix.telegram.handlers import start
+
+
+def create_bot(settings: Settings) -> Bot:
+    return Bot(
+        token=settings.telegram_bot_token.get_secret_value(),
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+
+
+def create_dispatcher(settings: Settings) -> Dispatcher:
+    dispatcher = Dispatcher(settings=settings)
+    dispatcher.include_router(start.create_router())
+    return dispatcher
+
+
+async def configure_menu_button(bot: Bot, settings: Settings) -> None:
+    """Point the chat menu button at the Mini App, when one is configured."""
+    if settings.webapp_url:
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text="Меню", web_app=WebAppInfo(url=settings.webapp_url))
+        )
