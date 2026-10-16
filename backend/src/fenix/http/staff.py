@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from fenix.http import staff_catalog
 from fenix.http.auth import CurrentStaff, LocationIdDep, current_staff
 from fenix.http.deps import SessionDep, SettingsDep
 from fenix.modules.identity import api as identity
@@ -13,6 +14,7 @@ from fenix.platform.errors import ApiError
 from fenix.telegram.bot import bot_username
 
 router = APIRouter(prefix="/staff", tags=["staff"], dependencies=[Depends(current_staff)])
+router.include_router(staff_catalog.router)
 
 
 class StaffMe(BaseModel):

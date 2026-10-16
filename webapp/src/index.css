@@ -756,3 +756,105 @@ a {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* Staff editors */
+.editor-list,
+.editor-dishes {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editor-category {
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.editor-dishes {
+  margin: 0;
+  padding: 0 0 var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.editor-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+}
+
+.editor-name {
+  flex: 1;
+  min-height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.icon-button:disabled {
+  color: var(--line);
+  cursor: default;
+}
+
+.add-button {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.editor-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field > span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.field input,
+.field select,
+.field textarea,
+.size-row input {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.size-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+}
+
+.toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.danger-text {
+  color: var(--error);
+}
