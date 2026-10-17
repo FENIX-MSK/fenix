@@ -11,9 +11,11 @@ import { SunMark } from './SunMark'
 interface Props {
   onBack: () => void
   onCheckout?: () => void
+  /** Lines «Повторить» could not add (story 4.2). */
+  skipped?: string[]
 }
 
-export function CartScreen({ onBack, onCheckout }: Props) {
+export function CartScreen({ onBack, onCheckout, skipped = [] }: Props) {
   const { cart, set } = useCart()
   const [error, setError] = useState<string | null>(null)
 
@@ -42,6 +44,12 @@ export function CartScreen({ onBack, onCheckout }: Props) {
         </button>
       )}
       <h1 className="title staff-title">Корзина</h1>
+      {skipped.length > 0 && (
+        <p className="notice" role="status">
+          {skipped.join(', ')} {skipped.length > 1 ? 'закончились' : 'закончилось'} — мы не добавили{' '}
+          {skipped.length > 1 ? 'их' : 'это'} в корзину.
+        </p>
+      )}
       {!cart || cart.lines.length === 0 ? (
         <div className="empty">
           <SunMark size={40} />

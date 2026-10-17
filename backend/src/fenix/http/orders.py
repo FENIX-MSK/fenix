@@ -1,13 +1,15 @@
 """The guest's orders and their online payment (FR-12, FR-13)."""
 
+import base64
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 from fenix.http.auth import CurrentUser, LocationIdDep
+from fenix.http.cart import CartOut, cart_out
 from fenix.http.checkout import PaymentMethod
 from fenix.http.deps import SessionDep
 from fenix.modules.locations import api as locations
@@ -52,6 +54,35 @@ class PlaceIn(BaseModel):
 
 class TestPaymentIn(BaseModel):
     succeeded: bool
+
+
+class OrdersPage(BaseModel):
+    orders: list[OrderOut]
+    # Pass back as `cursor` for the next page; null on the last one.
+    next_cursor: str | None
+
+
+class RepeatOut(BaseModel):
+    added: int
+    # Titles of lines that are gone from the menu or stopped (FR-18).
+    skipped: list[str]
+    cart: CartOut
+
+
+PAGE_SIZE = 20
+
+
+def encode_cursor(order: ordering.OrderView) -> str:
+    raw = f"{order.created_at.isoformat()}|{order.id}"
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+
+def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    try:
+        created_at, order_id = base64.urlsafe_b64decode(cursor.encode()).decode().split("|")
+        return datetime.fromisoformat(created_at), uuid.UUID(order_id)
+    except ValueError as exc:
+        raise ApiError(422, "bad_cursor", "Invalid page cursor") from exc
 
 
 def lines_out(order: ordering.OrderView) -> list[OrderLineOut]:
@@ -131,6 +162,46 @@ async def place_order(
             session, order.id, location_id, order.total, f"Заказ {order.label}"
         )
     return await present(session, order)
+
+
+@router.get("/orders")
+async def my_orders(
+    user: CurrentUser,
+    session: SessionDep,
+    cursor: str | None = None,
+    limit: int = Query(default=PAGE_SIZE, ge=1, le=50),
+) -> OrdersPage:
+    """The guest's orders, newest first (FR-17)."""
+    page = await ordering.guest_orders(
+        session, user.id, limit=limit + 1, before=decode_cursor(cursor) if cursor else None
+    )
+    more = len(page) > limit
+    page = page[:limit]
+    paid = await payments.order_payments(session, [order.id for order in page])
+    return OrdersPage(
+        orders=[order_out(order, paid[order.id]) for order in page],
+        next_cursor=encode_cursor(page[-1]) if more else None,
+    )
+
+
+@router.get("/orders/active")
+async def active_order(user: CurrentUser, session: SessionDep) -> OrderOut | None:
+    """The banner over the menu while an order is in progress."""
+    order = await ordering.active_guest_order(session, user.id)
+    return await present(session, order) if order else None
+
+
+@router.post("/orders/{order_id}/repeat")
+async def repeat_order(
+    order_id: uuid.UUID, user: CurrentUser, session: SessionDep, location_id: LocationIdDep
+) -> RepeatOut:
+    """«Повторить»: the lines go back into the cart at today's prices (FR-18)."""
+    try:
+        result = await ordering.repeat_order(session, order_id, user.id, location_id)
+    except ordering.OrderError as exc:
+        raise order_error(exc) from exc
+    cart = await ordering.view_cart(session, user.id, location_id)
+    return RepeatOut(added=result.added, skipped=result.skipped, cart=cart_out(cart))
 
 
 @router.get("/orders/{order_id}")

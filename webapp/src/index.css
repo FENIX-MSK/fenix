@@ -1453,3 +1453,56 @@ a {
 .cancel-form .search {
   margin: var(--space-2) 0;
 }
+
+/* Order history and the active order banner */
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-card {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.history-open {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.history-lines {
+  font-size: 14px;
+}
+
+.history-more {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.active-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: calc(100% - 2 * var(--gutter));
+  min-height: 48px;
+  margin: var(--space-2) var(--gutter) 0;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
