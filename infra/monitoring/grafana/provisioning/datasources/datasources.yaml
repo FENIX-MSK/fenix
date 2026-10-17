@@ -1,5 +1,13 @@
 apiVersion: 1
 
+# The datasources were first provisioned without a uid; alerts and the dashboard refer to
+# fixed uids, so the old ones are removed and recreated (they hold no user data).
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+  - name: Loki
+    orgId: 1
+
 datasources:
   - name: Prometheus
     uid: prometheus
