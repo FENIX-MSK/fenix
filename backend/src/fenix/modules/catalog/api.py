@@ -13,6 +13,7 @@ from fenix.modules.catalog import (
     modifier_editor,
     photos,
     pricing,
+    promotions,
     seed,
     stop_list,
 )
@@ -23,6 +24,7 @@ from fenix.modules.catalog.models import Category, Dish
 from fenix.modules.catalog.modifier_editor import GroupInput, GroupLinks, OptionInput
 from fenix.modules.catalog.photos import MAX_UPLOAD_BYTES as MAX_PHOTO_BYTES
 from fenix.modules.catalog.pricing import InvalidSelectionError, MissingGroup, Price, Quote
+from fenix.modules.catalog.promotions import PromotionError, PromotionInput, PromotionView
 from fenix.modules.catalog.stop_list import StopDish, StopGroup, StopItem
 
 __all__ = [
@@ -40,6 +42,9 @@ __all__ = [
     "ModifierOption",
     "OptionInput",
     "Price",
+    "PromotionError",
+    "PromotionInput",
+    "PromotionView",
     "Quote",
     "SizeInput",
     "SizeOption",
@@ -51,21 +56,26 @@ __all__ = [
     "StopDish",
     "StopGroup",
     "StopItem",
+    "active_promotions",
     "create_category",
     "create_dish",
     "create_group",
+    "create_promotion",
     "delete_category",
     "delete_dish",
     "delete_group",
+    "delete_promotion",
     "get_dish",
     "get_menu",
     "list_groups",
+    "list_promotions",
     "prepare_dish_photo",
     "price",
     "quote",
     "reorder_categories",
     "reorder_dishes",
     "seed_menu",
+    "seed_promotions",
     "set_dish_photo",
     "set_group_links",
     "set_stopped",
@@ -74,6 +84,7 @@ __all__ = [
     "update_category",
     "update_dish",
     "update_group",
+    "update_promotion",
 ]
 
 
@@ -97,8 +108,10 @@ async def price(
     size_id: uuid.UUID,
     modifier_ids: list[uuid.UUID],
     quantity: int,
+    claimed_promotion_id: uuid.UUID | None = None,
 ) -> Price:
-    """The single price function (AD-6). Raises InvalidSelectionError for what cannot be
+    """The single price function (AD-6), with the largest applicable promotion: automatic
+    ones and the claimed «checked» one. Raises InvalidSelectionError for what cannot be
     ordered; an unmet minimum is not an error but `complete=False`."""
     return await pricing.price(
         session,
@@ -107,6 +120,7 @@ async def price(
         size_id=size_id,
         modifier_ids=modifier_ids,
         quantity=quantity,
+        claimed_promotion_id=claimed_promotion_id,
     )
 
 
@@ -313,6 +327,7 @@ async def quote(
     size_id: uuid.UUID,
     modifier_ids: list[uuid.UUID],
     quantity: int,
+    claimed_promotion_id: uuid.UUID | None = None,
 ) -> Quote:
     """`price` plus display names; an unorderable selection gives `problem` instead of
     raising, and a deleted dish gives empty names."""
@@ -323,4 +338,39 @@ async def quote(
         size_id=size_id,
         modifier_ids=modifier_ids,
         quantity=quantity,
+        claimed_promotion_id=claimed_promotion_id,
     )
+
+
+async def active_promotions(session: AsyncSession, location_id: uuid.UUID) -> list[PromotionView]:
+    """Promotions in force today at the location (banner, checked discounts)."""
+    today = await promotions.local_today(session, location_id)
+    return await promotions.active(session, location_id, today)
+
+
+async def list_promotions(session: AsyncSession, location_id: uuid.UUID) -> list[PromotionView]:
+    return await promotions.list_all(session, location_id)
+
+
+async def create_promotion(
+    session: AsyncSession, location_id: uuid.UUID, data: PromotionInput
+) -> uuid.UUID:
+    """Raises PromotionError: bad_percent, bad_dates, title_required, category_not_found."""
+    return await promotions.create(session, location_id, data)
+
+
+async def update_promotion(
+    session: AsyncSession, location_id: uuid.UUID, promotion_id: uuid.UUID, data: PromotionInput
+) -> None:
+    await promotions.update(session, location_id, promotion_id, data)
+
+
+async def delete_promotion(
+    session: AsyncSession, location_id: uuid.UUID, promotion_id: uuid.UUID
+) -> None:
+    await promotions.delete(session, location_id, promotion_id)
+
+
+async def seed_promotions(session: AsyncSession, location_id: uuid.UUID) -> bool:
+    """The birthday discount (10%, checked, no end date); idempotent."""
+    return await promotions.seed_birthday(session, location_id)

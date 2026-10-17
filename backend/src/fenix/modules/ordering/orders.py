@@ -10,6 +10,7 @@ from sqlalchemy import func, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fenix.modules.catalog import api as catalog
 from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
 from fenix.modules.ordering import cart, kitchen
@@ -100,6 +101,8 @@ EVENT_NAMES: dict[str, str] = {
     "dispatch": "dispatched",
     "deliver": "delivered",
     "cancel": "cancelled",
+    "confirm_discount": "discount_confirmed",
+    "reject_discount": "discount_rejected",
 }
 
 
@@ -129,6 +132,8 @@ class OrderLine:
     quantity: int
     unit_price: int
     total_price: int
+    original_unit_price: int = 0
+    promotion_title: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +169,9 @@ class OrderView:
     address: dict[str, str] | None = None
     change_from: int | None = None
     scheduled_for: datetime | None = None
+    discount_claim: dict[str, object] | None = None
+    discount_status: str | None = None
+    total_without_claim: int | None = None
     log: list[LogEntry] = field(default_factory=list)
     # Internal, for staff only.
     cancel_reason: str | None = None
@@ -191,7 +199,15 @@ def view(order: Order) -> OrderView:
         created_at=order.created_at,
         ready_at=order.ready_at,
         lines=[
-            OrderLine(i.title, list(i.modifier_names), i.quantity, i.unit_price, i.total_price)
+            OrderLine(
+                i.title,
+                list(i.modifier_names),
+                i.quantity,
+                i.unit_price,
+                i.total_price,
+                i.original_unit_price or i.unit_price,
+                i.promotion_title,
+            )
             for i in order.items
         ],
         log=[
@@ -211,6 +227,9 @@ def view(order: Order) -> OrderView:
         address=order.address,
         change_from=order.change_from,
         scheduled_for=order.scheduled_for,
+        discount_claim=order.discount_claim,
+        discount_status=order.discount_status,
+        total_without_claim=order.total_without_claim,
     )
 
 
@@ -245,6 +264,8 @@ async def emit_event(
             "delivery_fee": order.delivery_fee,
             "address": order.address,
             "change_from": order.change_from,
+            "discount_claim": order.discount_claim,
+            "discount_status": order.discount_status,
             "timezone": timezone,
             "lines": [
                 {
@@ -296,6 +317,7 @@ async def place(
     address: Address | None = None,
     change_from: int | None = None,
     scheduled_for: datetime | None = None,
+    claimed_promotion_id: uuid.UUID | None = None,
 ) -> OrderView:
     settings = await locations.get_order_settings(session, location_id, now)
     if not settings.status.is_open:
@@ -319,14 +341,37 @@ async def place(
     if not contact.phone or not contact.has_consent:
         raise OrderError("contact_required")
 
-    current = await cart.view(session, user_id, location_id)
+    claim: dict[str, object] | None = None
+    if claimed_promotion_id is not None:
+        promotion = next(
+            (
+                p
+                for p in await catalog.active_promotions(session, location_id)
+                if p.id == claimed_promotion_id and p.kind == "checked"
+            ),
+            None,
+        )
+        if promotion is None:
+            raise OrderError("promotion_unavailable")
+        # The discount is confirmed at the counter: no online payment (FR-11).
+        if payment_method == "online":
+            raise OrderError("claim_requires_on_site")
+        claim = {
+            "promotion_id": str(promotion.id),
+            "title": promotion.title,
+            "percent": promotion.percent,
+        }
+
+    current = await cart.view(session, user_id, location_id, claimed_promotion_id)
     if not current.lines:
         raise OrderError("empty_cart")
     if any(line.problem for line in current.lines):
         raise OrderError("cart_has_unavailable")
+    without = await cart.view(session, user_id, location_id) if claim else current
 
     delivery_fee = settings.delivery_fee if fulfilment == "delivery" else 0
     total = current.total + delivery_fee
+    claimed_line = {line.id: line for line in without.lines}
     if change_from is not None and (payment_method != "cash" or change_from < total):
         raise OrderError("bad_change")
 
@@ -355,6 +400,9 @@ async def place(
         customer_phone=contact.phone,
         phone_verified=contact.phone_verified,
         total=total,
+        discount_claim=claim,
+        discount_status="pending" if claim else None,
+        total_without_claim=without.total + delivery_fee if claim else None,
         items=[
             OrderItem(
                 position=position,
@@ -366,6 +414,10 @@ async def place(
                 quantity=line.quantity,
                 unit_price=line.unit_price or 0,
                 total_price=line.total_price or 0,
+                original_unit_price=line.original_unit_price or line.unit_price or 0,
+                promotion_title=line.promotion_title,
+                discount_percent=line.discount_percent,
+                unit_price_without_claim=(claimed_line[line.id].unit_price if claim else None),
             )
             for position, line in enumerate(current.lines)
         ],
@@ -424,6 +476,9 @@ async def transition(
         )
     if action == "cancel" and actor.kind == "staff" and not (note and note.strip()):
         raise OrderError("reason_required")
+    # A claimed discount is decided before the order leaves the counter (FR-23).
+    if action in ("hand_over", "deliver") and order.discount_status == "pending":
+        raise OrderError("discount_decision_required")
 
     version = expected_version if expected_version is not None else order.version
     values: dict[str, object] = {"status": rule.to, "version": version + 1, "updated_at": now}
@@ -575,3 +630,61 @@ async def due_scheduled(session: AsyncSession, now: datetime) -> list[uuid.UUID]
         Order.status == "scheduled", Order.scheduled_for <= now + kitchen.RELEASE_LEAD
     )
     return list((await session.execute(statement)).scalars())
+
+
+async def decide_discount(
+    session: AsyncSession,
+    order_id: uuid.UUID,
+    confirm: bool,
+    actor: Actor,
+    *,
+    expected_version: int,
+    now: datetime,
+) -> OrderView:
+    """Staff confirm the claimed discount or remove it; the total is recalculated and the
+    decision logged (FR-23). Raises order_not_found, no_discount_claim, order_conflict."""
+    order = await session.get(Order, order_id)
+    if order is None:
+        raise OrderError("order_not_found", 404)
+    if order.discount_status != "pending" or order.status in FINAL:
+        raise OrderError("no_discount_claim")
+    if order.version != expected_version:
+        raise OrderError("order_conflict", 409)
+    action = "confirm_discount" if confirm else "reject_discount"
+    changed = await session.execute(
+        update(Order)
+        .where(Order.id == order_id, Order.version == expected_version)
+        .values(
+            version=expected_version + 1,
+            updated_at=now,
+            discount_status="confirmed" if confirm else "rejected",
+            total=order.total if confirm else order.total_without_claim,
+        )
+        .returning(Order.id)
+        .execution_options(synchronize_session=False)
+    )
+    if changed.first() is None:
+        raise OrderError("order_conflict", 409)
+    if not confirm:
+        for item in order.items:
+            if item.unit_price_without_claim is not None:
+                item.unit_price = item.unit_price_without_claim
+                item.total_price = item.unit_price_without_claim * item.quantity
+                if item.promotion_title == (order.discount_claim or {}).get("title"):
+                    item.promotion_title = None
+                    item.discount_percent = 0
+    session.add(
+        OrderEvent(
+            order_id=order_id,
+            action=action,
+            from_status=order.status,
+            to_status=order.status,
+            actor_kind=actor.kind,
+            actor_user_id=actor.user_id,
+        )
+    )
+    await session.flush()
+    await session.refresh(order)
+    decided = view(order)
+    await emit_event(session, decided, action, actor.kind)
+    return decided

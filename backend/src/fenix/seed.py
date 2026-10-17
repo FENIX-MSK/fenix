@@ -40,6 +40,10 @@ async def run() -> None:
         async with create_session_factory(engine)() as session, session.begin():
             log.info("seed.locations", created=await locations.seed_defaults(session))
             log.info("seed.catalog", created=await catalog.seed_menu(session))
+            location_id = await locations.get_default_location_id(session)
+            if location_id is not None:
+                created = await catalog.seed_promotions(session, location_id)
+                log.info("seed.promotions", created=created)
     finally:
         await engine.dispose()
 

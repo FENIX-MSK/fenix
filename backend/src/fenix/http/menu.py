@@ -21,6 +21,8 @@ class MenuDishOut(BaseModel):
     has_sizes: bool = Field(description="Several sizes: show the price as «от N ₽»")
     sold_out: bool
     photo_url: str | None
+    original_price_from: int = Field(description="Before the promotion; struck through if higher")
+    discount_percent: int
 
 
 class MenuCategoryOut(BaseModel):
@@ -30,16 +32,26 @@ class MenuCategoryOut(BaseModel):
     dishes: list[MenuDishOut]
 
 
+class PromotionBannerOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    percent: int
+    # "auto" is already in the prices; "checked" is claimed at checkout.
+    kind: str
+
+
 class MenuOut(BaseModel):
     categories: list[MenuCategoryOut]
+    promotions: list[PromotionBannerOut]
 
 
 class SizeOut(BaseModel):
     id: uuid.UUID
     name: str = Field(description="Empty for a dish with a single price")
-    price: int = Field(description="Kopecks")
+    price: int = Field(description="Kopecks, after the automatic promotion")
     portion: str | None
     available: bool
+    original_price: int
 
 
 class ModifierOut(BaseModel):
@@ -82,6 +94,8 @@ class MissingGroupOut(BaseModel):
 class PriceOut(BaseModel):
     unit_price: int = Field(description="Kopecks for one item")
     total_price: int = Field(description="Kopecks for the whole quantity")
+    original_unit_price: int
+    promotion_title: str | None
     complete: bool = Field(description="False while a required group is not chosen")
     missing_groups: list[MissingGroupOut]
 
@@ -95,7 +109,8 @@ async def _location_id(session: SessionDep) -> uuid.UUID:
 
 @router.get("/menu")
 async def get_menu(session: SessionDep) -> MenuOut:
-    categories = await catalog.get_menu(session, await _location_id(session))
+    location_id = await _location_id(session)
+    categories = await catalog.get_menu(session, location_id)
     return MenuOut(
         categories=[
             MenuCategoryOut(
@@ -112,12 +127,18 @@ async def get_menu(session: SessionDep) -> MenuOut:
                         has_sizes=dish.has_sizes,
                         sold_out=dish.sold_out,
                         photo_url=photo_url(dish.photo_key),
+                        original_price_from=dish.original_price_from,
+                        discount_percent=dish.discount_percent,
                     )
                     for dish in category.dishes
                 ],
             )
             for category in categories
-        ]
+        ],
+        promotions=[
+            PromotionBannerOut(id=p.id, title=p.title, percent=p.percent, kind=p.kind)
+            for p in await catalog.active_promotions(session, location_id)
+        ],
     )
 
 
@@ -133,7 +154,14 @@ async def get_dish(dish_id: uuid.UUID, session: SessionDep) -> DishOut:
         portion=dish.portion,
         photo_url=photo_url(dish.photo_key),
         sizes=[
-            SizeOut(id=s.id, name=s.name, price=s.price, portion=s.portion, available=s.available)
+            SizeOut(
+                id=s.id,
+                name=s.name,
+                price=s.price,
+                portion=s.portion,
+                available=s.available,
+                original_price=s.original_price,
+            )
             for s in dish.sizes
         ],
         groups=[
@@ -172,6 +200,8 @@ async def price(selection: PriceIn, session: SessionDep) -> PriceOut:
     return PriceOut(
         unit_price=result.unit_price,
         total_price=result.total_price,
+        original_unit_price=result.original_unit_price,
+        promotion_title=result.promotion_title,
         complete=result.complete,
         missing_groups=[MissingGroupOut(id=g.id, name=g.name) for g in result.missing_groups],
     )

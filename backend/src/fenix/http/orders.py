@@ -26,6 +26,8 @@ class OrderLineOut(BaseModel):
     quantity: int
     unit_price: int
     total_price: int
+    original_unit_price: int
+    promotion_title: str | None
 
 
 class AddressOut(BaseModel):
@@ -57,6 +59,9 @@ class OrderOut(BaseModel):
     address: AddressOut | None = None
     change_from: int | None = None
     scheduled_for: datetime | None = None
+    # A claimed «checked» discount: its title and pending / confirmed / rejected.
+    discount_title: str | None = None
+    discount_status: str | None = None
 
 
 class PlaceIn(BaseModel):
@@ -68,6 +73,8 @@ class PlaceIn(BaseModel):
     change_from: int | None = Field(default=None, ge=0)
     # A slot from `GET /checkout`; absent = as soon as possible.
     scheduled_for: datetime | None = None
+    # A «checked» promotion from `GET /checkout` (FR-11); payment on site only.
+    claimed_promotion_id: uuid.UUID | None = None
 
 
 class TestPaymentIn(BaseModel):
@@ -111,6 +118,8 @@ def lines_out(order: ordering.OrderView) -> list[OrderLineOut]:
             quantity=line.quantity,
             unit_price=line.unit_price,
             total_price=line.total_price,
+            original_unit_price=line.original_unit_price,
+            promotion_title=line.promotion_title,
         )
         for line in order.lines
     ]
@@ -135,6 +144,8 @@ def order_out(order: ordering.OrderView, payment: payments.OrderPayment) -> Orde
         address=AddressOut(**order.address) if order.address else None,
         change_from=order.change_from,
         scheduled_for=order.scheduled_for,
+        discount_title=str(order.discount_claim["title"]) if order.discount_claim else None,
+        discount_status=order.discount_status,
     )
 
 
@@ -180,6 +191,7 @@ async def place_order(
             address=ordering.Address(**body.address.model_dump()) if body.address else None,
             change_from=body.change_from,
             scheduled_for=body.scheduled_for,
+            claimed_promotion_id=body.claimed_promotion_id,
         )
     except ordering.OrderError as exc:
         raise order_error(exc) from exc

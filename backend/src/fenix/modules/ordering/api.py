@@ -49,6 +49,7 @@ __all__ = [
     "active_guest_order",
     "add_to_cart",
     "cancel_unpaid",
+    "decide_discount",
     "due_scheduled",
     "get_order",
     "guest_orders",
@@ -65,6 +66,7 @@ __all__ = [
     "subscriptions",
     "transition",
     "view_cart",
+    "view_cart_with_claim",
 ]
 
 
@@ -124,11 +126,12 @@ async def place_order(
     address: Address | None = None,
     change_from: int | None = None,
     scheduled_for: datetime | None = None,
+    claimed_promotion_id: uuid.UUID | None = None,
 ) -> OrderView:
     """Create the order from the cart in one transaction: snapshot, number, log; the cart
     is emptied. Raises OrderError: location_closed, orders_paused, delivery_unavailable,
     address_required, slot_unavailable, contact_required, empty_cart,
-    cart_has_unavailable, bad_change."""
+    cart_has_unavailable, bad_change, promotion_unavailable, claim_requires_on_site."""
     return await orders.place(
         session,
         user_id,
@@ -140,7 +143,30 @@ async def place_order(
         address=address,
         change_from=change_from,
         scheduled_for=scheduled_for,
+        claimed_promotion_id=claimed_promotion_id,
     )
+
+
+async def decide_discount(
+    session: AsyncSession,
+    order_id: uuid.UUID,
+    confirm: bool,
+    actor: Actor,
+    *,
+    expected_version: int,
+    now: datetime,
+) -> OrderView:
+    """FR-23: confirm or remove the claimed «checked» discount."""
+    return await orders.decide_discount(
+        session, order_id, confirm, actor, expected_version=expected_version, now=now
+    )
+
+
+async def view_cart_with_claim(
+    session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID, promotion_id: uuid.UUID
+) -> CartView:
+    """The cart as it would be with the claimed discount: the preliminary total (FR-11)."""
+    return await cart.view(session, user_id, location_id, promotion_id)
 
 
 def is_allowed(order: OrderView, action: str, actor: ActorKind) -> bool:

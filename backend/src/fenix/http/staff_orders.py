@@ -57,6 +57,10 @@ class StaffOrderOut(BaseModel):
     address: AddressOut | None
     change_from: int | None
     scheduled_for: datetime | None
+    # «День рождения — проверить документ» while pending (FR-23).
+    discount_title: str | None
+    discount_status: str | None
+    total_without_claim: int | None
     # Internal (FR-22): staff see the reason, guests never do.
     cancel_reason: str | None
     log: list[LogEntryOut] = Field(default_factory=list)
@@ -110,6 +114,11 @@ class PaymentIn(BaseModel):
     method: OnSite
 
 
+class DiscountIn(BaseModel):
+    confirm: bool
+    expected_version: int
+
+
 def staff_order_out(
     order: ordering.OrderView,
     payment: payments.OrderPayment,
@@ -137,6 +146,9 @@ def staff_order_out(
         address=AddressOut(**order.address) if order.address else None,
         change_from=order.change_from,
         scheduled_for=order.scheduled_for,
+        discount_title=str(order.discount_claim["title"]) if order.discount_claim else None,
+        discount_status=order.discount_status,
+        total_without_claim=order.total_without_claim,
         cancel_reason=order.cancel_reason,
         log=[
             LogEntryOut(
@@ -291,3 +303,27 @@ async def mark_paid(
     except payments.PaymentError as exc:
         raise payment_error(exc) from exc
     return await detailed(session, order)
+
+
+@router.post("/{order_id}/discount")
+async def decide_discount(
+    order_id: uuid.UUID,
+    body: DiscountIn,
+    staff: CurrentStaff,
+    session: SessionDep,
+    location_id: LocationIdDep,
+) -> StaffOrderOut:
+    """Confirm the claimed discount after checking the document, or remove it (FR-23)."""
+    order = await location_order(session, order_id, location_id)
+    try:
+        decided = await ordering.decide_discount(
+            session,
+            order.id,
+            body.confirm,
+            ordering.Actor("staff", staff.id),
+            expected_version=body.expected_version,
+            now=datetime.now(UTC),
+        )
+    except ordering.OrderError as exc:
+        raise order_error(exc) from exc
+    return await detailed(session, decided)

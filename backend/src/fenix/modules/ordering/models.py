@@ -90,6 +90,13 @@ class Order(Base):
     address: Mapped[dict[str, str] | None] = mapped_column(JSONB)
     # Cash on delivery: the note the courier brings change for, kopecks.
     change_from: Mapped[int | None] = mapped_column(Integer)
+    # A «checked» discount the guest claimed (FR-11): {"promotion_id", "title", "percent"};
+    # staff confirm or reject it at hand-over (FR-23).
+    discount_claim: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    # pending, confirmed, rejected.
+    discount_status: Mapped[str | None] = mapped_column(String(16))
+    # What the order costs if the claim is rejected (items without it plus delivery).
+    total_without_claim: Mapped[int | None] = mapped_column(Integer)
     # Preorder (FR-8): the slot the order must be ready by; goes to the kitchen in advance.
     scheduled_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -124,6 +131,12 @@ class OrderItem(Base):
     quantity: Mapped[int] = mapped_column(SmallInteger)
     unit_price: Mapped[int] = mapped_column(Integer)
     total_price: Mapped[int] = mapped_column(Integer)
+    # The promotion applied (AD-6 snapshot) and the price before it.
+    original_unit_price: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    promotion_title: Mapped[str | None] = mapped_column(String(256))
+    discount_percent: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    # The unit price should a claimed discount be rejected.
+    unit_price_without_claim: Mapped[int | None] = mapped_column(Integer)
 
 
 class OrderEvent(Base):

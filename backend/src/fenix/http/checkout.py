@@ -1,5 +1,6 @@
 """Checkout data and the guest's contact (FR-7 to FR-10)."""
 
+import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
@@ -8,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from fenix.http.auth import CurrentUser, LocationIdDep
 from fenix.http.deps import SessionDep, SettingsDep
+from fenix.modules.catalog import api as catalog
 from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
 from fenix.modules.ordering import api as ordering
@@ -25,6 +27,14 @@ class ContactOut(BaseModel):
     has_consent: bool
 
 
+class CheckedPromotionOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    percent: int
+    # The cart total with this discount: preliminary until staff confirm it.
+    preview_total: int
+
+
 class CheckoutOut(BaseModel):
     is_open: bool
     status_text: str
@@ -40,6 +50,8 @@ class CheckoutOut(BaseModel):
     slots: list[datetime]
     payment_methods: list[PaymentMethod]
     contact: ContactOut
+    # Discounts the guest claims here, confirmed at hand-over (FR-11, birthday).
+    checked_promotions: list[CheckedPromotionOut]
 
 
 class ContactIn(BaseModel):
@@ -79,6 +91,18 @@ async def get_checkout(
         delivery_fee=settings.delivery_fee,
         slots=await ordering.preorder_slots(session, location_id, now),
         payment_methods=["online", "cash", "card"],
+        checked_promotions=[
+            CheckedPromotionOut(
+                id=p.id,
+                title=p.title,
+                percent=p.percent,
+                preview_total=(
+                    await ordering.view_cart_with_claim(session, user.id, location_id, p.id)
+                ).total,
+            )
+            for p in await catalog.active_promotions(session, location_id)
+            if p.kind == "checked"
+        ],
         contact=contact_out(await identity.get_contact(session, user.id)),
     )
 
