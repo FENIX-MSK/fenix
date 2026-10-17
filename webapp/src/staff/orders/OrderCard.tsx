@@ -1,6 +1,6 @@
 import type { StaffOrder } from '../../api/types'
 import { formatPrice } from '../../guest/format'
-import { clock, NEXT_STEP, paymentBadge } from './texts'
+import { addressLine, clock, nextStep, paymentBadge } from './texts'
 
 interface Props {
   order: StaffOrder
@@ -12,7 +12,7 @@ interface Props {
 
 /** A card on the board: what to make, and the one next step (EXPERIENCE.md). */
 export function OrderCard({ order, highlighted, busy, onOpen, onNext }: Props) {
-  const next = NEXT_STEP[order.status]
+  const next = nextStep(order)
   const badge = paymentBadge(order)
   return (
     <article className={highlighted ? 'board-card highlighted' : 'board-card'}>
@@ -20,6 +20,7 @@ export function OrderCard({ order, highlighted, busy, onOpen, onNext }: Props) {
         <div className="board-card-head">
           <span className="board-number">{order.number}</span>
           <span className="muted">{clock.format(new Date(order.created_at))}</span>
+          {order.fulfilment === 'delivery' && <span className="badge">Доставка</span>}
           {order.ready_at && order.status !== 'new' && (
             <span className="board-ready">к {clock.format(new Date(order.ready_at))}</span>
           )}
@@ -34,6 +35,12 @@ export function OrderCard({ order, highlighted, busy, onOpen, onNext }: Props) {
           ))}
         </ul>
         {order.comment && <p className="board-comment">💬 {order.comment}</p>}
+        {order.fulfilment === 'delivery' && (
+          <p className="board-address">
+            🏠 {addressLine(order)} · {order.customer_phone}
+            {order.change_from ? ` · сдача с ${formatPrice(order.change_from)}` : ''}
+          </p>
+        )}
         <p className="board-meta">
           <span className={badge.paid ? 'badge paid' : 'badge'}>{badge.text}</span>
           <span>{formatPrice(order.total)}</span>

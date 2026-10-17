@@ -58,12 +58,21 @@ export default function App() {
   }, [])
 
   const placeOrder = useCallback(
-    async ({ paymentMethod, comment }: PlaceOrder): Promise<string | null> => {
+    async (place: PlaceOrder): Promise<string | null> => {
       try {
-        const { data, error } = await api.POST('/api/v1/orders', { body: { payment_method: paymentMethod, comment } })
+        const { data, error } = await api.POST('/api/v1/orders', {
+          body: {
+            payment_method: place.paymentMethod,
+            comment: place.comment,
+            fulfilment: place.fulfilment,
+            address: place.address,
+            change_from: place.changeFrom,
+            scheduled_for: place.scheduledFor,
+          },
+        })
         if (!data) {
           reloadCart()
-          return orderErrorText(error?.error.code)
+          return orderErrorText(error?.error.code, error?.error.details)
         }
         platform.haptic('success')
         setOrder({ id: data.id, initial: data })

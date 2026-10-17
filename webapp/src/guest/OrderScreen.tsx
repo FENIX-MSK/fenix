@@ -5,7 +5,7 @@ import { useSignals } from '../api/signals'
 import type { Order } from '../api/types'
 import { platform } from '../platform'
 import { formatPrice } from './format'
-import { FULFILMENT_LABELS, paymentText, STATUS_LABELS } from './orderTexts'
+import { addressText, FULFILMENT_LABELS, paymentText, scheduledText, STATUS_LABELS } from './orderTexts'
 import { NETWORK_ERROR, RETRY } from './texts'
 
 interface Props {
@@ -180,7 +180,13 @@ export function OrderDetails({ order }: { order: Order }) {
         </p>
       </section>
       <section className="card">
-        <p>{FULFILMENT_LABELS[order.fulfilment] ?? order.fulfilment}</p>
+        <p>
+          {FULFILMENT_LABELS[order.fulfilment] ?? order.fulfilment}
+          {scheduledText(order) && ` · ${scheduledText(order)}`}
+        </p>
+        {addressText(order) && <p>{addressText(order)}</p>}
+        {order.delivery_fee > 0 && <p className="muted">Доставка {formatPrice(order.delivery_fee)}</p>}
+        {order.change_from && <p className="muted">Сдача с {formatPrice(order.change_from)}</p>}
         <p>{paymentText(order)}</p>
         {order.comment && <p className="muted">«{order.comment}»</p>}
       </section>

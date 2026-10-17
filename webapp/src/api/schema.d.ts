@@ -483,6 +483,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/location/order-params": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Order Params */
+        get: operations["get_order_params_api_v1_staff_location_order_params_get"];
+        /** Update Order Params */
+        put: operations["update_order_params_api_v1_staff_location_order_params_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/location/pauses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pauses */
+        get: operations["get_pauses_api_v1_staff_location_pauses_get"];
+        /**
+         * Set Pauses
+         * @description «Приём заказов приостановлен» / «Доставка приостановлена» (FR-30).
+         */
+        put: operations["set_pauses_api_v1_staff_location_pauses_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/location/photos": {
         parameters: {
             query?: never;
@@ -622,6 +661,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/orders/kitchen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Kitchen
+         * @description The manual kitchen level (FR-37); every board hears about it at once.
+         */
+        post: operations["set_kitchen_api_v1_staff_orders_kitchen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/orders/{order_id}": {
         parameters: {
             query?: never;
@@ -734,8 +793,34 @@ export interface components {
              */
             size_id: string;
         };
+        /** AddressOut */
+        AddressOut: {
+            /** Apartment */
+            apartment: string;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /**
+             * Entrance
+             * @default
+             */
+            entrance: string;
+            /**
+             * Floor
+             * @default
+             */
+            floor: string;
+            /**
+             * House
+             * @description Дом / корпус
+             */
+            house: string;
+        };
         /** BoardOut */
         BoardOut: {
+            kitchen: components["schemas"]["KitchenOut"];
             /** Orders */
             orders: components["schemas"]["StaffOrderOut"][];
             /** Prep Minutes */
@@ -816,16 +901,26 @@ export interface components {
         CheckoutOut: {
             /**
              * Asap Minutes
-             * @description «Как можно скорее (≈N мин)»
+             * @description «Как можно скорее (≈N мин)»: preparation + load
              */
             asap_minutes: number;
             contact: components["schemas"]["ContactOut"];
+            /** Delivery Fee */
+            delivery_fee: number;
+            /** Delivery Unavailable */
+            delivery_unavailable: ("disabled" | "paused") | null;
             /** Fulfilment */
-            fulfilment: "pickup"[];
+            fulfilment: ("pickup" | "delivery")[];
             /** Is Open */
             is_open: boolean;
+            /** Kitchen Busy */
+            kitchen_busy: boolean;
+            /** Orders Paused */
+            orders_paused: boolean;
             /** Payment Methods */
             payment_methods: ("online" | "cash" | "card")[];
+            /** Slots */
+            slots: string[];
             /** Status Text */
             status_text: string;
         };
@@ -999,6 +1094,29 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** KitchenIn */
+        KitchenIn: {
+            /** Level */
+            level: ("calm" | "moderate" | "busy") | null;
+            /** Minutes */
+            minutes?: (30 | 60) | null;
+        };
+        /** KitchenOut */
+        KitchenOut: {
+            /** In Work */
+            in_work: number;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "calm" | "moderate" | "busy";
+            /** Manual */
+            manual: boolean;
+            /** Manual Until */
+            manual_until: string | null;
+            /** Wait Minutes */
+            wait_minutes: number;
+        };
         /** LinksIn */
         LinksIn: {
             /** Category Ids */
@@ -1032,12 +1150,16 @@ export interface components {
             address: string;
             /** Description */
             description: string;
+            /** Kitchen Busy */
+            kitchen_busy: boolean;
             /** Map Url */
             map_url: string;
             /** Name */
             name: string;
             /** Opening Hours */
             opening_hours: components["schemas"]["OpeningHoursOut"][];
+            /** Orders Paused */
+            orders_paused: boolean;
             /** Phone */
             phone: string;
             /**
@@ -1048,6 +1170,8 @@ export interface components {
             /** Social Links */
             social_links: components["schemas"]["SocialLinkOut"][];
             status: components["schemas"]["OpeningStatusOut"];
+            /** Wait Minutes */
+            wait_minutes: number;
         };
         /** LogEntryOut */
         LogEntryOut: {
@@ -1254,6 +1378,9 @@ export interface components {
         };
         /** OrderOut */
         OrderOut: {
+            address?: components["schemas"]["AddressOut"] | null;
+            /** Change From */
+            change_from?: number | null;
             /** Comment */
             comment: string;
             /**
@@ -1261,6 +1388,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Delivery Fee
+             * @default 0
+             */
+            delivery_fee: number;
             /** Fulfilment */
             fulfilment: string;
             /**
@@ -1288,6 +1420,8 @@ export interface components {
             payment_status: "unpaid" | "pending" | "failed" | "paid" | "refunded";
             /** Ready At */
             ready_at: string | null;
+            /** Scheduled For */
+            scheduled_for?: string | null;
             /** Status */
             status: string;
             /** Total */
@@ -1295,12 +1429,46 @@ export interface components {
             /** Version */
             version: number;
         };
+        /**
+         * OrderParamsIo
+         * @description Order parameters (FR-31); applied to orders placed after saving.
+         */
+        OrderParamsIo: {
+            /** Delivery Enabled */
+            delivery_enabled: boolean;
+            /**
+             * Delivery Fee
+             * @description kopecks
+             */
+            delivery_fee: number;
+            /** Load Busy Extra */
+            load_busy_extra: number;
+            /** Load Busy From */
+            load_busy_from: number;
+            /** Load Moderate Extra */
+            load_moderate_extra: number;
+            /** Load Moderate From */
+            load_moderate_from: number;
+            /** Prep Minutes */
+            prep_minutes: number;
+            /** Slot Step Minutes */
+            slot_step_minutes: number;
+            /** Unpaid Timeout Minutes */
+            unpaid_timeout_minutes: number;
+        };
         /** OrdersPage */
         OrdersPage: {
             /** Next Cursor */
             next_cursor: string | null;
             /** Orders */
             orders: components["schemas"]["OrderOut"][];
+        };
+        /** PausesIo */
+        PausesIo: {
+            /** Delivery Paused */
+            delivery_paused?: boolean | null;
+            /** Orders Paused */
+            orders_paused?: boolean | null;
         };
         /** PaymentIn */
         PaymentIn: {
@@ -1322,16 +1490,27 @@ export interface components {
         };
         /** PlaceIn */
         PlaceIn: {
+            address?: components["schemas"]["AddressOut"] | null;
+            /** Change From */
+            change_from?: number | null;
             /**
              * Comment
              * @default
              */
             comment: string;
             /**
+             * Fulfilment
+             * @default pickup
+             * @enum {string}
+             */
+            fulfilment: "pickup" | "delivery";
+            /**
              * Payment Method
              * @enum {string}
              */
             payment_method: "online" | "cash" | "card";
+            /** Scheduled For */
+            scheduled_for?: string | null;
         };
         /** PriceIn */
         PriceIn: {
@@ -1524,8 +1703,11 @@ export interface components {
         };
         /** StaffOrderOut */
         StaffOrderOut: {
+            address: components["schemas"]["AddressOut"] | null;
             /** Cancel Reason */
             cancel_reason: string | null;
+            /** Change From */
+            change_from: number | null;
             /** Comment */
             comment: string;
             /**
@@ -1537,6 +1719,8 @@ export interface components {
             customer_name: string;
             /** Customer Phone */
             customer_phone: string;
+            /** Delivery Fee */
+            delivery_fee: number;
             /** Fulfilment */
             fulfilment: string;
             /**
@@ -1560,6 +1744,8 @@ export interface components {
             phone_verified: boolean;
             /** Ready At */
             ready_at: string | null;
+            /** Scheduled For */
+            scheduled_for: string | null;
             /** Status */
             status: string;
             /** Total */
@@ -2999,6 +3185,174 @@ export interface operations {
             };
         };
     };
+    get_order_params_api_v1_staff_location_order_params_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderParamsIo"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_order_params_api_v1_staff_location_order_params_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderParamsIo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderParamsIo"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_pauses_api_v1_staff_location_pauses_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PausesIo"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_pauses_api_v1_staff_location_pauses_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PausesIo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PausesIo"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     add_photo_api_v1_staff_location_photos_post: {
         parameters: {
             query?: never;
@@ -3443,6 +3797,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BoardOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_kitchen_api_v1_staff_orders_kitchen_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KitchenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KitchenOut"];
                 };
             };
             /** @description Client error */

@@ -8,7 +8,7 @@ import { OrderCard } from './OrderCard'
 import { type Act, OrderSheet } from './OrderSheet'
 import { Sheet } from './Sheet'
 import { chime, enableSound, soundEnabled } from './sound'
-import { clock, type Column, COLUMNS } from './texts'
+import { clock, type Column, COLUMNS, LOAD_LABELS, nextStep } from './texts'
 
 const HIGHLIGHT_MS = 5_000
 // The chime repeats while a new order is neither opened nor accepted [ASSUMPTION].
@@ -21,7 +21,11 @@ interface Props {
   openOrderId?: string | null
 }
 
-type Dialog = { kind: 'accept'; order: StaffOrder } | { kind: 'pay'; order: StaffOrder } | null
+type Dialog =
+  | { kind: 'accept'; order: StaffOrder }
+  | { kind: 'pay'; order: StaffOrder; action: string }
+  | { kind: 'kitchen' }
+  | null
 
 export function Board({ openOrderId }: Props) {
   const [board, setBoard] = useState<BoardData | null>(null)
@@ -137,9 +141,12 @@ export function Board({ openOrderId }: Props) {
   const next = (order: StaffOrder) => {
     seen.current.add(order.id)
     if (order.status === 'new') return setDialog({ kind: 'accept', order })
-    if (order.status === 'ready' && order.payment_status !== 'paid') return setDialog({ kind: 'pay', order })
-    const step = { accepted: 'start_cooking', cooking: 'mark_ready', ready: 'hand_over' }[order.status]
-    if (step) void act(order, step)
+    const step = nextStep(order)
+    if (!step) return
+    if (['hand_over', 'deliver'].includes(step.action) && order.payment_status !== 'paid') {
+      return setDialog({ kind: 'pay', order, action: step.action })
+    }
+    void act(order, step.action)
   }
 
   const open = (id: string) => {
@@ -154,7 +161,15 @@ export function Board({ openOrderId }: Props) {
 
   return (
     <div className="board">
-      <h1 className="title staff-title">Заказы</h1>
+      <div className="board-head">
+        <h1 className="title staff-title">Заказы</h1>
+        {board && (
+          <button type="button" className={`kitchen-chip ${board.kitchen.level}`} onClick={() => setDialog({ kind: 'kitchen' })}>
+            Кухня: {LOAD_LABELS[board.kitchen.level]} · {board.kitchen.in_work} в работе
+            {board.kitchen.manual && ' · вручную'}
+          </button>
+        )}
+      </div>
       {!sound && (
         <button
           type="button"
@@ -233,6 +248,22 @@ export function Board({ openOrderId }: Props) {
           }}
         />
       )}
+      {dialog?.kind === 'kitchen' && board && (
+        <KitchenSheet
+          manual={board.kitchen.manual}
+          manualUntil={board.kitchen.manual_until ?? null}
+          onClose={() => setDialog(null)}
+          onSet={async (level, minutes) => {
+            try {
+              await api.POST('/api/v1/staff/orders/kitchen', { body: { level, minutes } })
+              setDialog(null)
+              void load()
+            } catch {
+              setNotice('Не получилось изменить загруженность.')
+            }
+          }}
+        />
+      )}
       {dialog?.kind === 'pay' && (
         <Sheet title={`Выдать ${dialog.order.number}`} onClose={() => setDialog(null)}>
           <p>Заказ не оплачен. Как гость заплатил?</p>
@@ -243,7 +274,7 @@ export function Board({ openOrderId }: Props) {
                 type="button"
                 className="primary-button"
                 onClick={async () => {
-                  if (await act(dialog.order, 'hand_over', { paid_with: method })) setDialog(null)
+                  if (await act(dialog.order, dialog.action, { paid_with: method })) setDialog(null)
                 }}
               >
                 {method === 'cash' ? 'Наличными' : 'Картой'}
@@ -314,4 +345,64 @@ function ClosedOrder({ orderId, onClose }: { orderId: string; onClose: () => voi
     )
   }
   return <OrderSheet order={order} onClose={onClose} onAct={async () => false} onMarkPaid={async () => false} />
+}
+
+type Level = 'calm' | 'moderate' | 'busy'
+
+function KitchenSheet({
+  manual,
+  manualUntil,
+  onClose,
+  onSet,
+}: {
+  manual: boolean
+  manualUntil: string | null
+  onClose: () => void
+  onSet: (level: Level | null, minutes: 30 | 60 | null) => void
+}) {
+  const [level, setLevel] = useState<Level>('busy')
+  const [minutes, setMinutes] = useState<30 | 60 | null>(30)
+  return (
+    <Sheet title="Загруженность кухни" onClose={onClose}>
+      {manual && (
+        <p className="muted">
+          Сейчас задано вручную{manualUntil ? ` · до ${clock.format(new Date(manualUntil))}` : ' · до отмены'}
+        </p>
+      )}
+      <div className="chips sheet-section">
+        {(['calm', 'moderate', 'busy'] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={level === value ? 'chip active' : 'chip'}
+            aria-pressed={level === value}
+            onClick={() => setLevel(value)}
+          >
+            {{ calm: 'Спокойно', moderate: 'Умеренно', busy: 'Загружены' }[value]}
+          </button>
+        ))}
+      </div>
+      <div className="chips sheet-section">
+        {([30, 60, null] as const).map((value) => (
+          <button
+            key={String(value)}
+            type="button"
+            className={minutes === value ? 'chip active' : 'chip'}
+            aria-pressed={minutes === value}
+            onClick={() => setMinutes(value)}
+          >
+            {value ? `${value} мин` : 'До отмены'}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="primary-button wide" onClick={() => onSet(level, minutes)}>
+        Применить
+      </button>
+      {manual && (
+        <button type="button" className="secondary-button wide-secondary" onClick={() => onSet(null, null)}>
+          Вернуть авто
+        </button>
+      )}
+    </Sheet>
+  )
 }

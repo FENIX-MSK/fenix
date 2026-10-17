@@ -2,13 +2,33 @@ import type { StaffOrder } from '../../api/types'
 
 export const clock = new Intl.DateTimeFormat('ru-RU', { hour: 'numeric', minute: '2-digit' })
 
-export type Column = 'new' | 'cooking' | 'ready'
+export type Column = 'new' | 'cooking' | 'ready' | 'delivering' | 'scheduled'
 
 export const COLUMNS: { id: Column; label: string; statuses: string[] }[] = [
   { id: 'new', label: 'Новые', statuses: ['new'] },
   { id: 'cooking', label: 'Готовятся', statuses: ['accepted', 'cooking'] },
-  { id: 'ready', label: 'Готовы', statuses: ['ready', 'delivering'] },
+  { id: 'ready', label: 'Готовы', statuses: ['ready'] },
+  { id: 'delivering', label: 'В доставке', statuses: ['delivering'] },
+  { id: 'scheduled', label: 'Запланированные', statuses: ['scheduled'] },
 ]
+
+export const LOAD_LABELS: Record<string, string> = { calm: 'спокойно', moderate: 'умеренно', busy: 'загружены' }
+
+export function nextStep(order: StaffOrder): { action: string; label: string } | undefined {
+  if (order.status === 'ready' && order.fulfilment === 'delivery') return { action: 'dispatch', label: 'Передан курьеру' }
+  if (order.status === 'delivering') return { action: 'deliver', label: 'Доставлен' }
+  return NEXT_STEP[order.status]
+}
+
+export function addressLine(order: StaffOrder): string | null {
+  const a = order.address
+  if (!a) return null
+  const parts = [`корп. ${a.house}`, `кв. ${a.apartment}`]
+  if (a.entrance) parts.push(`под. ${a.entrance}`)
+  if (a.floor) parts.push(`эт. ${a.floor}`)
+  if (a.comment) parts.push(a.comment)
+  return parts.join(', ')
+}
 
 export const STATUS_LABELS: Record<string, string> = {
   pending_payment: 'Ждёт оплату',

@@ -11,10 +11,26 @@ import { useRemote } from './useRemote'
 
 export type PaymentMethod = Checkout['payment_methods'][number]
 
+export interface Address {
+  house: string
+  apartment: string
+  entrance: string
+  floor: string
+  comment: string
+}
+
 export interface PlaceOrder {
   paymentMethod: PaymentMethod
   comment: string
+  fulfilment: 'pickup' | 'delivery'
+  address: Address | null
+  /** Kopecks; cash on delivery only. */
+  changeFrom: number | null
+  /** A slot from the checkout, or null for «как можно скорее». */
+  scheduledFor: string | null
 }
+
+const slotTime = new Intl.DateTimeFormat('ru-RU', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Moscow' })
 
 interface Props {
   onBack: () => void
@@ -65,7 +81,19 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
   const [comment, setComment] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [fulfilment, setFulfilment] = useState<'pickup' | 'delivery'>('pickup')
+  const [address, setAddress] = useState<Address>({ house: '', apartment: '', entrance: '', floor: '', comment: '' })
+  const [changeFrom, setChangeFrom] = useState('')
+  const [slot, setSlot] = useState<string>('')
 
+  if (checkout.orders_paused) {
+    return (
+      <div className="notice">
+        <p>Сейчас кафе не принимает заказы.</p>
+        <p className="muted">Попробуйте чуть позже — меню можно посмотреть.</p>
+      </div>
+    )
+  }
   if (!checkout.is_open) {
     return (
       <div className="notice">
@@ -91,7 +119,13 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
     else setError('Не получилось получить контакт — введите номер вручную')
   }
 
-  const ready = Boolean(phone || typedPhone.trim()) && consent && name.trim() && cart && cart.count > 0
+  const delivery = fulfilment === 'delivery'
+  const total = (cart?.total ?? 0) + (delivery ? checkout.delivery_fee : 0)
+  const addressReady = !delivery || (address.house.trim() !== '' && address.apartment.trim() !== '')
+  const ready =
+    Boolean(phone || typedPhone.trim()) && consent && name.trim() && cart && cart.count > 0 && addressReady
+  const setField = (key: keyof Address) => (event: { target: { value: string } }) =>
+    setAddress({ ...address, [key]: event.target.value })
   const place = async () => {
     if (!ready || !onPlace) return
     setBusy(true)
@@ -101,7 +135,15 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
       consent: true,
       ...(phone ? {} : { phone: typedPhone }),
     }).catch(() => NETWORK_ERROR)
-    if (!failure) failure = await onPlace({ paymentMethod: payment, comment })
+    if (!failure)
+      failure = await onPlace({
+        paymentMethod: payment,
+        comment,
+        fulfilment,
+        address: delivery ? address : null,
+        changeFrom: delivery && payment === 'cash' && changeFrom ? Math.round(Number(changeFrom) * 100) : null,
+        scheduledFor: slot || null,
+      })
     setBusy(false)
     if (failure) setError(failure)
   }
@@ -110,7 +152,60 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
     <div className="editor-form">
       <section className="card">
         <h2 className="section">Получение</h2>
-        <p>Самовывоз · как можно скорее (≈{checkout.asap_minutes} мин)</p>
+        <div className="chips">
+          {(['pickup', 'delivery'] as const).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className={fulfilment === kind ? 'chip active' : 'chip'}
+              aria-pressed={fulfilment === kind}
+              disabled={!checkout.fulfilment.includes(kind)}
+              onClick={() => setFulfilment(kind)}
+            >
+              {kind === 'pickup' ? 'Самовывоз' : `Доставка · ${formatPrice(checkout.delivery_fee)}`}
+            </button>
+          ))}
+        </div>
+        {checkout.delivery_unavailable === 'paused' && (
+          <p className="caption muted">Доставка сейчас приостановлена — можно забрать самому.</p>
+        )}
+        {delivery && (
+          <div className="address-fields">
+            <label className="field">
+              <span>Дом / корпус *</span>
+              <input value={address.house} onChange={setField('house')} maxLength={64} />
+            </label>
+            <label className="field">
+              <span>Квартира *</span>
+              <input value={address.apartment} onChange={setField('apartment')} maxLength={16} />
+            </label>
+            <label className="field">
+              <span>Подъезд</span>
+              <input value={address.entrance} onChange={setField('entrance')} maxLength={16} />
+            </label>
+            <label className="field">
+              <span>Этаж</span>
+              <input value={address.floor} onChange={setField('floor')} maxLength={16} />
+            </label>
+            <label className="field wide-field">
+              <span>Комментарий курьеру</span>
+              <input value={address.comment} onChange={setField('comment')} maxLength={300} />
+            </label>
+          </div>
+        )}
+        <label className="field">
+          <span>Когда</span>
+          <select value={slot} onChange={(e) => setSlot(e.target.value)}>
+            <option value="">
+              Как можно скорее (≈{checkout.asap_minutes} мин){checkout.kitchen_busy ? ' · кухня загружена' : ''}
+            </option>
+            {checkout.slots.map((value) => (
+              <option key={value} value={value}>
+                К {slotTime.format(new Date(value))}
+              </option>
+            ))}
+          </select>
+        </label>
       </section>
 
       <section className="card">
@@ -157,6 +252,26 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
         ))}
       </section>
 
+      {delivery && payment === 'cash' && (
+        <label className="field">
+          <span>Сдача с, ₽</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={changeFrom}
+            onChange={(e) => setChangeFrom(e.target.value)}
+            placeholder="Например, 5000"
+          />
+        </label>
+      )}
+      {delivery && (
+        <p className="order-total">
+          <span>Доставка</span>
+          <span>{formatPrice(checkout.delivery_fee)}</span>
+        </p>
+      )}
+
       <label className="field">
         <span>Комментарий к заказу</span>
         <textarea rows={2} value={comment} maxLength={500} onChange={(e) => setComment(e.target.value)} />
@@ -164,7 +279,7 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
 
       {error && <p className="error-text">{error}</p>}
       <MainAction
-        text={`${payment === 'online' ? 'Оплатить' : 'Оформить'} · ${formatPrice(cart?.total ?? 0)}`}
+        text={`${payment === 'online' ? 'Оплатить' : 'Оформить'} · ${formatPrice(total)}`}
         disabled={!ready || !onPlace}
         loading={busy}
         onClick={place}

@@ -25,6 +25,21 @@ export const FULFILMENT_LABELS: Record<string, string> = {
   delivery: 'Доставка',
 }
 
+const clock = new Intl.DateTimeFormat('ru-RU', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Moscow' })
+
+export function addressText(order: Order): string | null {
+  const a = order.address
+  if (!a) return null
+  const parts = [`корпус ${a.house}`, `кв. ${a.apartment}`]
+  if (a.entrance) parts.push(`подъезд ${a.entrance}`)
+  if (a.floor) parts.push(`этаж ${a.floor}`)
+  return parts.join(', ')
+}
+
+export function scheduledText(order: Order): string | null {
+  return order.scheduled_for ? `к ${clock.format(new Date(order.scheduled_for))}` : null
+}
+
 export function paymentText(order: Order): string {
   if (order.payment_status === 'paid') return `${PAYMENT_LABELS[order.payment_method]} · оплачен`
   if (order.payment_status === 'refunded') return `${PAYMENT_LABELS[order.payment_method]} · деньги возвращены`
@@ -32,8 +47,23 @@ export function paymentText(order: Order): string {
 }
 
 /** Why the order was not created, by the server's error code. */
-export function orderErrorText(code: string | undefined): string {
+const slotTime = new Intl.DateTimeFormat('ru-RU', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Moscow' })
+
+export function orderErrorText(code: string | undefined, details?: Record<string, unknown>): string {
   switch (code) {
+    case 'slot_unavailable': {
+      const slots = (details?.slots as string[] | undefined) ?? []
+      const near = slots.map((s) => slotTime.format(new Date(s))).join(', ')
+      return near ? `Это время уже недоступно. Ближайшие: ${near}.` : 'Это время уже недоступно.'
+    }
+    case 'orders_paused':
+      return 'Кафе сейчас не принимает заказы — попробуйте чуть позже.'
+    case 'delivery_unavailable':
+      return 'Доставка сейчас недоступна — можно забрать самому.'
+    case 'address_required':
+      return 'Укажите дом и квартиру.'
+    case 'bad_change':
+      return 'Сдача должна быть не меньше суммы заказа.'
     case 'location_closed':
       return 'Кафе сейчас закрыто — заказ можно оформить, когда откроемся.'
     case 'contact_required':
