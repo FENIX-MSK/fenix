@@ -1,3 +1,4 @@
+import type { LocationInfo } from '../api/types'
 import type { LocationState } from './useLocationInfo'
 import { SunMark } from './SunMark'
 
@@ -9,6 +10,13 @@ interface Props {
   onStaff?: () => void
 }
 
+function statusLine(info: LocationInfo): string {
+  if (!info.status.is_open) return info.status.text
+  if (info.orders_paused) return `${info.status.text} · заказы временно не принимаем`
+  const wait = info.kitchen_busy ? `Кухня загружена · ≈${info.wait_minutes} мин` : `Готовим ≈${info.wait_minutes} мин`
+  return `${info.status.text} · ${wait}`
+}
+
 export function Header({ location, onAbout, onHistory, onStaff }: Props) {
   return (
     <header className="header">
@@ -17,7 +25,7 @@ export function Header({ location, onAbout, onHistory, onStaff }: Props) {
         <div>
           <h1 className="display">Феникс</h1>
           <p className="caption muted header-status" aria-live="polite">
-            {location.kind === 'ready' ? location.data.status.text : ' '}
+            {location.kind === 'ready' ? statusLine(location.data) : ' '}
           </p>
         </div>
       </div>

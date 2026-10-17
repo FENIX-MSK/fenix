@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fenix.modules.identity import contact, service, staff
@@ -40,6 +40,7 @@ __all__ = [
     "grant_staff",
     "is_staff",
     "list_staff",
+    "new_users_by_source",
     "remove_staff_membership",
     "update_contact",
 ]
@@ -123,6 +124,22 @@ async def find_user(session: AsyncSession, platform: Platform, external_id: str)
 async def get_user(session: AsyncSession, user_id: uuid.UUID) -> User | None:
     row = await session.get(IdentityUser, user_id)
     return _user(row) if row else None
+
+
+async def new_users_by_source(
+    session: AsyncSession, start: datetime, end: datetime, exclude_external_ids: set[str]
+) -> dict[str, int]:
+    """Guests who first opened the bot in [start, end), by source label (FR-36)."""
+    statement = (
+        select(IdentityUser.source, func.count())
+        .where(
+            IdentityUser.created_at >= start,
+            IdentityUser.created_at < end,
+            IdentityUser.external_id.not_in(exclude_external_ids or {""}),
+        )
+        .group_by(IdentityUser.source)
+    )
+    return {source or "direct": count for source, count in (await session.execute(statement)).all()}
 
 
 async def find_user_by_username(session: AsyncSession, username: str) -> User | None:

@@ -66,8 +66,41 @@ async def handle_migration(
             )
 
 
+ALERTS_BOUND = "Готово: сюда будут приходить оповещения о сбоях."
+
+
+async def handle_alerts(
+    message: Message, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    """`/alerts` in a group: monitoring alerts go to this chat (NFR-6); staff only."""
+    sender = message.from_user
+    if message.chat.type not in ("group", "supergroup"):
+        await message.answer(GROUPS_ONLY.replace("/bind", "/alerts"))
+        return
+    if sender is None or sender.is_bot:
+        return
+    async with session_factory() as session, session.begin():
+        user = await identity.find_user(session, identity.Platform.TELEGRAM, str(sender.id))
+        location_id = await locations.get_default_location_id(session)
+        if (
+            user is None
+            or location_id is None
+            or not await identity.is_staff(session, user.id, location_id)
+        ):
+            await message.answer(NOT_STAFF)
+            return
+        await notifications.bind_alert_chat(
+            session,
+            platform="telegram",
+            chat_id=str(message.chat.id),
+            title=message.chat.title or "",
+        )
+    await message.answer(ALERTS_BOUND)
+
+
 def create_router() -> Router:
     router = Router(name="staff_chat")
     router.message.register(handle_bind, Command("bind"))
+    router.message.register(handle_alerts, Command("alerts"))
     router.message.register(handle_migration, F.migrate_to_chat_id)
     return router

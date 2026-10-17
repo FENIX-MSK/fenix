@@ -125,6 +125,8 @@ async def test_simple_dish(api: Api, seeded: async_sessionmaker[AsyncSession]) -
         "total_price": 69900,
         "complete": True,
         "missing_groups": [],
+        "original_unit_price": 69900,
+        "promotion_title": None,
     }
 
 

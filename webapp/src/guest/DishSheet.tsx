@@ -177,7 +177,16 @@ function DishChoice({ dish, onAdded }: { dish: DishDetail; onAdded: () => void }
                 }}
               />
               <span className="option-name">{size.name}</span>
-              <span className="option-price">{size.available ? formatPrice(size.price) : 'Закончилось'}</span>
+              <span className="option-price">
+                {!size.available ? (
+                  'Закончилось'
+                ) : (
+                  <>
+                    {size.original_price > size.price && <s className="old-price">{formatPrice(size.original_price)}</s>}
+                    {formatPrice(size.price)}
+                  </>
+                )}
+              </span>
             </label>
           ))}
         </fieldset>

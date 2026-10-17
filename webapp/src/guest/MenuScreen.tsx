@@ -78,7 +78,21 @@ export function MenuScreen({ menu, onRetry, onOpenDish }: Props) {
       </div>
     )
   }
-  return <MenuContent categories={menu.data.categories} onOpenDish={onOpenDish} />
+  return (
+    <>
+      {menu.data.promotions.length > 0 && (
+        <div className="promo-banners">
+          {menu.data.promotions.map((promotion) => (
+            <p key={promotion.id} className="promo-banner">
+              {promotion.title}
+              {promotion.kind === 'checked' && <span className="caption"> · отметьте при оформлении</span>}
+            </p>
+          ))}
+        </div>
+      )}
+      <MenuContent categories={menu.data.categories} onOpenDish={onOpenDish} />
+    </>
+  )
 }
 
 function MenuContent({ categories, onOpenDish }: { categories: MenuCategory[]; onOpenDish: (dish: MenuDish) => void }) {

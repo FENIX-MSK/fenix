@@ -24,7 +24,12 @@ export function DishCard({ dish, onOpen }: Props) {
         <span className="dish-name">{dish.name}</span>
         {meta && <span className="dish-meta caption muted">{meta}</span>}
         <span className="dish-footer">
-          <span className="dish-price">{formatPrice(dish.price_from, dish.has_sizes)}</span>
+          <span className="dish-price">
+            {dish.discount_percent > 0 && (
+              <s className="old-price">{formatPrice(dish.original_price_from, dish.has_sizes)}</s>
+            )}
+            {formatPrice(dish.price_from, dish.has_sizes)}
+          </span>
           {dish.sold_out && <span className="sold-out-badge caption">Закончилось</span>}
         </span>
       </span>

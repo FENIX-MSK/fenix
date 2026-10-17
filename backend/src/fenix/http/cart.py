@@ -23,12 +23,15 @@ class CartLineOut(BaseModel):
     total_price: int | None
     available: bool
     problem: str | None
+    original_total_price: int | None = Field(description="Before the promotion")
+    promotion_title: str | None
 
 
 class CartOut(BaseModel):
     lines: list[CartLineOut]
     total: int = Field(description="Kopecks of the lines that can be ordered")
     count: int
+    original_total: int
 
 
 class AddIn(BaseModel):
@@ -56,11 +59,14 @@ def cart_out(view: ordering.CartView) -> CartOut:
                 total_price=line.total_price,
                 available=line.problem is None,
                 problem=line.problem,
+                original_total_price=line.original_total_price,
+                promotion_title=line.promotion_title,
             )
             for line in view.lines
         ],
         total=view.total,
         count=view.count,
+        original_total=view.original_total,
     )
 
 

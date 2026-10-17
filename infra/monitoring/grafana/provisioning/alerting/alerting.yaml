@@ -1,0 +1,153 @@
+# Alerts (story 7.2, NFR-6) go to the API's internal webhook; the API forwards them to the
+# Telegram chat bound with /alerts, through the outbox and tg-egress.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: fenix-api
+    receivers:
+      - uid: fenix-api-webhook
+        type: webhook
+        settings:
+          url: http://api:8000/api/internal/alerts
+          httpMethod: POST
+          authorization_scheme: Bearer
+          authorization_credentials: $ALERTS_WEBHOOK_TOKEN
+
+policies:
+  - orgId: 1
+    receiver: fenix-api
+    group_by: ["alertname"]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+groups:
+  - orgId: 1
+    name: fenix
+    folder: Fenix
+    interval: 1m
+    rules:
+      - uid: api-down
+        title: API недоступен
+        condition: C
+        for: 2m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: api не отвечает Prometheus больше 2 минут
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { expr: 'min(up{job="api"})', instant: true, refId: A }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              refId: C
+              conditions: [{ evaluator: { type: lt, params: [1] } }]
+      - uid: bot-down
+        title: Бот недоступен
+        condition: C
+        for: 2m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: процесс бота не отвечает больше 2 минут
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { expr: 'min(up{job="bot"})', instant: true, refId: A }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              refId: C
+              conditions: [{ evaluator: { type: lt, params: [1] } }]
+      - uid: worker-down
+        title: Воркер недоступен
+        condition: C
+        for: 2m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: уведомления и автоотмена не работают
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { expr: 'min(up{job="worker"})', instant: true, refId: A }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              refId: C
+              conditions: [{ evaluator: { type: lt, params: [1] } }]
+      - uid: telegram-down
+        title: Telegram недоступен (tg-egress)
+        condition: C
+        for: 2m
+        noDataState: NoData
+        execErrState: Alerting
+        annotations:
+          summary: Bot API не отвечает через туннель больше 2 минут
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { expr: 'max_over_time(fenix_telegram_up[3m])', instant: true, refId: A }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              refId: C
+              conditions: [{ evaluator: { type: lt, params: [1] } }]
+      - uid: api-5xx
+        title: Ошибки API 5xx
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: доля ответов 5xx больше 2% за 5 минут
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: 'sum(rate(http_requests_total{status="5xx"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 0.0001)'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              refId: C
+              conditions: [{ evaluator: { type: gt, params: [0.02] } }]
+      - uid: outbox-stuck
+        title: Outbox не доставляется
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: самое старое недоставленное событие старше 5 минут
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { expr: 'max(fenix_outbox_oldest_pending_seconds)', instant: true, refId: A }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              refId: C
+              conditions: [{ evaluator: { type: gt, params: [300] } }]

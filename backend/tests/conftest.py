@@ -101,6 +101,9 @@ async def seeded(
     async with session_factory() as session, session.begin():
         await locations.seed_defaults(session)
         await catalog.seed_menu(session)
+        location_id = await locations.get_default_location_id(session)
+        assert location_id is not None
+        await catalog.seed_promotions(session, location_id)
     return session_factory
 
 

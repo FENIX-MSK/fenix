@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { StaffOrder } from '../../api/types'
 import { formatPrice } from '../../guest/format'
 import { Sheet } from './Sheet'
-import { ACTION_LABELS, CANCEL_REASONS, clock, paymentBadge, STATUS_LABELS } from './texts'
+import { ACTION_LABELS, addressLine, CANCEL_REASONS, clock, paymentBadge, STATUS_LABELS } from './texts'
 
 export type Act = (order: StaffOrder, action: string, extra?: Record<string, unknown>) => Promise<boolean>
 
@@ -12,12 +12,13 @@ interface Props {
   onClose: () => void
   onAct: Act
   onMarkPaid: (order: StaffOrder, method: 'cash' | 'card') => Promise<boolean>
+  onDiscount?: (order: StaffOrder, confirm: boolean) => Promise<boolean>
 }
 
-const CANCELLABLE = new Set(['new', 'accepted', 'cooking', 'ready', 'scheduled'])
+const CANCELLABLE = new Set(['new', 'accepted', 'cooking', 'ready', 'delivering', 'scheduled'])
 
 /** Everything about one order, with the secondary actions behind it (FR-22, FR-25). */
-export function OrderSheet({ order, onClose, onAct, onMarkPaid }: Props) {
+export function OrderSheet({ order, onClose, onAct, onMarkPaid, onDiscount }: Props) {
   const [cancelling, setCancelling] = useState(false)
   const badge = paymentBadge(order)
   const onSite = order.payment_method !== 'online'
@@ -30,8 +31,16 @@ export function OrderSheet({ order, onClose, onAct, onMarkPaid }: Props) {
           <a href={`tel:${order.customer_phone}`}>{order.customer_phone}</a>
           {!order.phone_verified && <span className="muted"> (введён вручную)</span>}
         </p>
+        {order.fulfilment === 'delivery' && (
+          <p>
+            🏠 {addressLine(order)}
+            {order.change_from ? ` · сдача с ${formatPrice(order.change_from)}` : ''}
+          </p>
+        )}
         <p className="muted">
-          Самовывоз · оформлен в {clock.format(new Date(order.created_at))}
+          {order.fulfilment === 'delivery' ? 'Доставка' : 'Самовывоз'} · оформлен в{' '}
+          {clock.format(new Date(order.created_at))}
+          {order.scheduled_for && ` · предзаказ к ${clock.format(new Date(order.scheduled_for))}`}
           {order.ready_at && ` · готов к ${clock.format(new Date(order.ready_at))}`}
         </p>
       </section>
@@ -57,6 +66,28 @@ export function OrderSheet({ order, onClose, onAct, onMarkPaid }: Props) {
       </p>
       {order.cancel_reason && <p className="error-text">Причина отмены: {order.cancel_reason}</p>}
 
+      {order.discount_title && (
+        <div className="sheet-section">
+          <p>
+            🎂 {order.discount_title}:{' '}
+            {order.discount_status === 'pending'
+              ? `проверить документ (без скидки ${formatPrice(order.total_without_claim ?? order.total)})`
+              : order.discount_status === 'confirmed'
+                ? 'подтверждена'
+                : 'снята'}
+          </p>
+          {order.discount_status === 'pending' && onDiscount && (
+            <div className="button-row">
+              <button type="button" className="primary-button" onClick={() => void onDiscount(order, true)}>
+                Подтвердить скидку
+              </button>
+              <button type="button" className="secondary-button" onClick={() => void onDiscount(order, false)}>
+                Снять скидку
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {canMarkPaid && (
         <div className="button-row sheet-section">
           <button type="button" className="secondary-button" onClick={() => onMarkPaid(order, 'cash')}>

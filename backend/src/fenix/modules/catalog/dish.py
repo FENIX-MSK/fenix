@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from fenix.modules.catalog import promotions
 from fenix.modules.catalog.models import (
     Category,
     CategoryModifierGroup,
@@ -21,9 +22,11 @@ from fenix.modules.catalog.models import (
 class SizeOption:
     id: uuid.UUID
     name: str
+    # After the automatic promotion; `original_price` before it.
     price: int
     portion: str | None
     available: bool
+    original_price: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +55,8 @@ class DishDetail:
     photo_key: str | None
     sizes: list[SizeOption]
     groups: list[GroupOption]
+    discount_percent: int = 0
+    promotion_title: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,14 +123,28 @@ async def get_dish(
     if dish is None:
         return None
     stopped = await load_stop_list(session, location_id)
+    today = await promotions.local_today(session, location_id)
+    promotion = promotions.best_for(
+        await promotions.active(session, location_id, today), dish.category_id, None
+    )
+    percent = promotion.percent if promotion else 0
     return DishDetail(
         id=dish.id,
         name=dish.name,
         description=dish.description,
         portion=dish.portion,
         photo_key=dish.photo_key,
+        discount_percent=percent,
+        promotion_title=promotion.title if promotion else None,
         sizes=[
-            SizeOption(s.id, s.name, s.price, s.portion, s.id not in stopped.size_ids)
+            SizeOption(
+                s.id,
+                s.name,
+                promotions.discounted(s.price, percent) if percent else s.price,
+                s.portion,
+                s.id not in stopped.size_ids,
+                s.price,
+            )
             for s in dish.sizes
         ],
         groups=[

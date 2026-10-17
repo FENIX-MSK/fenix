@@ -100,10 +100,13 @@ jobs:
           ensure_secret GARAGE_ADMIN_TOKEN "\$(openssl rand -hex 24)"
           ensure_secret S3_ACCESS_KEY_ID "GK\$(openssl rand -hex 12)"
           ensure_secret S3_SECRET_ACCESS_KEY "\$(openssl rand -hex 32)"
+          ensure_secret ALERTS_WEBHOOK_TOKEN "\$(openssl rand -hex 24)"
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${IMAGE_TAG}/" .env
           docker compose -f compose.prod.yaml pull
           docker compose -f compose.prod.yaml up -d --remove-orphans
+          # Bind-mounted configs do not recreate containers: reload monitoring explicitly.
+          docker compose -f compose.prod.yaml restart prometheus grafana
           # MinIO was replaced by Garage (story 2.5); its data was never used.
           docker volume rm fenix_minio-data 2>/dev/null || true
           docker logout ghcr.io

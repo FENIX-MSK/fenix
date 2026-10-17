@@ -38,20 +38,38 @@ def number(payload: dict[str, Any]) -> str:
     return f"<b>{escape(payload['number'])}</b>"
 
 
+def address_text(payload: dict[str, Any]) -> str:
+    address = payload.get("address") or {}
+    parts = [f"корпус {address.get('house', '')}", f"кв. {address.get('apartment', '')}"]
+    if address.get("entrance"):
+        parts.append(f"подъезд {address['entrance']}")
+    if address.get("floor"):
+        parts.append(f"этаж {address['floor']}")
+    return escape(", ".join(parts))
+
+
 def guest_message(event: str, payload: dict[str, Any]) -> str | None:
     """What the guest is told about the event, or None when nothing is said (FR-16)."""
     status = payload["status"]
-    if event in ("placed", "payment_confirmed") and status == "new":
+    if event in ("placed", "payment_confirmed") and status in ("new", "scheduled"):
+        done = "запланирован" if status == "scheduled" else "оформлен"
         head = (
-            f"Оплата прошла. Заказ {number(payload)} оформлен."
+            f"Оплата прошла. Заказ {number(payload)} {done}."
             if event == "payment_confirmed"
-            else f"Заказ {number(payload)} оформлен."
+            else f"Заказ {number(payload)} {done}."
         )
-        return (
-            f"{head}\n\n{lines_text(payload)}\n\n"
-            f"Итого: {rubles(payload['total'])}, {PAYMENT_TEXTS[payload['payment_method']]}.\n"
-            "Напишем, когда кафе примет заказ."
+        details = []
+        at = local_time(payload, "scheduled_for")
+        if at:
+            details.append(f"Будет готов к {at}.")
+        if payload["fulfilment"] == "delivery":
+            details.append(f"Доставка: {address_text(payload)}.")
+        details.append(
+            f"Итого: {rubles(payload['total'])}, {PAYMENT_TEXTS[payload['payment_method']]}."
         )
+        if status == "new":
+            details.append("Напишем, когда кафе примет заказ.")
+        return f"{head}\n\n{lines_text(payload)}\n\n" + "\n".join(details)
     if event == "accepted":
         at = local_time(payload, "ready_at")
         when = f" Будет готов к {at}." if at else ""
@@ -62,6 +80,8 @@ def guest_message(event: str, payload: dict[str, Any]) -> str | None:
         return None
     if event == "dispatched":
         return f"Заказ {number(payload)} уже едет к вам."
+    if event == "delivered":
+        return f"Заказ {number(payload)} доставлен. Приятного аппетита."
     if event == "cancelled":
         # The staff's reason stays inside the cafe (FR-22).
         if payload.get("unpaid_timeout"):
@@ -77,10 +97,16 @@ def guest_message(event: str, payload: dict[str, Any]) -> str | None:
 def staff_new_order(payload: dict[str, Any]) -> str:
     payment = PAYMENT_TEXTS[payload["payment_method"]]
     fulfilment = FULFILMENT_TEXTS.get(payload["fulfilment"], payload["fulfilment"])
+    at = local_time(payload, "scheduled_for")
+    kind = f"Предзаказ к {at}" if at else "Новый заказ"
     text = (
-        f"Новый заказ {number(payload)} — {fulfilment}, {rubles(payload['total'])}\n"
+        f"{kind} {number(payload)} — {fulfilment}, {rubles(payload['total'])}\n"
         f"{lines_text(payload)}\n{payment}"
     )
+    if payload["fulfilment"] == "delivery":
+        text += f"\n🏠 {address_text(payload)}"
+        if payload.get("change_from"):
+            text += f"\nСдача с {rubles(payload['change_from'])}"
     if payload.get("comment"):
         text += f"\n💬 {escape(payload['comment'])}"
     return text

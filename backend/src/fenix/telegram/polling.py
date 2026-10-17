@@ -4,6 +4,7 @@ import asyncio
 
 import structlog
 
+from fenix.platform import metrics
 from fenix.platform.config import get_settings
 from fenix.platform.db import create_engine, create_session_factory
 from fenix.platform.logging import configure_logging
@@ -21,6 +22,8 @@ async def run() -> None:
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await configure_menu_button(bot, settings)
+        metrics.serve(metrics.BOT_PORT)
+        metrics.BOT_UP.set(1)
         log.info("bot.polling.start")
         await dispatcher.start_polling(bot)
     finally:
