@@ -166,3 +166,15 @@ class Dispatcher:
         while delivered < limit and await self.deliver_next(factory, now):
             delivered += 1
         return delivered
+
+
+async def stats(session: AsyncSession, now: datetime) -> tuple[int, float]:
+    """Undelivered events and the age of the oldest, in seconds (for alerts)."""
+    count, oldest = (
+        await session.execute(
+            select(func.count(), func.min(OutboxEvent.created_at)).where(
+                OutboxEvent.processed_at.is_(None)
+            )
+        )
+    ).one()
+    return count, (now - oldest).total_seconds() if oldest else 0.0

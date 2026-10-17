@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.notifications import handlers, staff_chat
+from fenix.modules.notifications import alerts, handlers, staff_chat
 from fenix.modules.notifications.gateway import Button, MessengerGateway, Undeliverable
 from fenix.modules.notifications.handlers import Links
 from fenix.modules.notifications.staff_chat import StaffChatInfo
@@ -16,15 +16,29 @@ __all__ = [
     "MessengerGateway",
     "StaffChatInfo",
     "Undeliverable",
+    "bind_alert_chat",
     "bind_staff_chat",
     "get_staff_chat",
+    "queue_alerts",
     "subscriptions",
 ]
 
 
 def subscriptions(gateway: MessengerGateway, links: Links) -> list[Subscription]:
-    """Outbox handlers that message guests and the staff chat."""
-    return handlers.subscriptions(gateway, links)
+    """Outbox handlers that message guests, the staff chat and the alert chat."""
+    return [*handlers.subscriptions(gateway, links), *alerts.subscriptions(gateway)]
+
+
+async def bind_alert_chat(
+    session: AsyncSession, *, platform: str, chat_id: str, title: str
+) -> None:
+    """`/alerts` in a group: monitoring alerts go there from now on."""
+    await alerts.bind(session, platform=platform, chat_id=chat_id, title=title)
+
+
+def queue_alerts(session: AsyncSession, items: list[dict[str, str]]) -> None:
+    """Grafana's alerts, delivered to the alert chat with retries (outbox)."""
+    alerts.queue(session, items)
 
 
 async def get_staff_chat(session: AsyncSession, location_id: uuid.UUID) -> StaffChatInfo | None:

@@ -50,6 +50,7 @@ services:
   worker:
     <<: *backend
     command: ["fenix-worker"]
+    networks: [app, monitoring]
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_started }
@@ -58,6 +59,7 @@ services:
   bot:
     <<: *backend
     command: ["fenix-bot-polling"]
+    networks: [app, monitoring]
     depends_on:
       migrate: { condition: service_completed_successfully }
       tg-egress: { condition: service_healthy }
@@ -141,6 +143,8 @@ services:
       GF_SERVER_ROOT_URL: https://${SITE_DOMAIN}/grafana/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # The alert webhook to the API (provisioning/alerting/alerting.yaml).
+      ALERTS_WEBHOOK_TOKEN: ${ALERTS_WEBHOOK_TOKEN}
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana

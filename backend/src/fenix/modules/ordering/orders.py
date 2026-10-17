@@ -700,3 +700,10 @@ async def orders_between(
         .order_by(Order.created_at)
     )
     return [view(order) for order in (await session.execute(statement)).scalars()]
+
+
+async def count_by_status(session: AsyncSession) -> dict[str, int]:
+    statement = (
+        select(Order.status, func.count()).where(Order.status.not_in(FINAL)).group_by(Order.status)
+    )
+    return {status: count for status, count in (await session.execute(statement)).all()}

@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr = SecretStr("0" * 64)
     garage_admin_url: str = "http://localhost:3903"
     garage_admin_token: SecretStr = SecretStr("local-garage-admin-token")
+    # Grafana's alert webhook authenticates with this bearer token (generated on deploy).
+    alerts_webhook_token: SecretStr | None = None
     # Outbound proxy for the Bot API (http://, socks5://). Needed where Telegram is blocked.
     telegram_proxy_url: SecretStr | None = None
 

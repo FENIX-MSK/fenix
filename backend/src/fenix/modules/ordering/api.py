@@ -49,6 +49,7 @@ __all__ = [
     "active_guest_order",
     "add_to_cart",
     "cancel_unpaid",
+    "count_by_status",
     "decide_discount",
     "due_scheduled",
     "get_order",
@@ -175,6 +176,11 @@ async def orders_between(
 ) -> list[OrderView]:
     """Orders created in [start, end) with their lines and log (reports)."""
     return await orders.orders_between(session, location_id, start, end)
+
+
+async def count_by_status(session: AsyncSession) -> dict[str, int]:
+    """Unfinished orders by status, all locations (metrics)."""
+    return await orders.count_by_status(session)
 
 
 def is_allowed(order: OrderView, action: str, actor: ActorKind) -> bool:

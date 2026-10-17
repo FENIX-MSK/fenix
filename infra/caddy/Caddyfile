@@ -1,6 +1,10 @@
 {$SITE_ADDRESS} {
 	encode zstd gzip
 
+	# Grafana's alert webhook is reached inside Docker only.
+	handle /api/internal/* {
+		respond 404
+	}
 	handle /api/* {
 		reverse_proxy api:8000
 	}

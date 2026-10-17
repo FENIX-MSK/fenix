@@ -89,9 +89,9 @@ development_status:
   6-4-подтверждение-скидки-при-выдаче: review
   epic-6-retrospective: optional
 
-  epic-7: backlog
-  7-1-отчёт-по-продажам: backlog
-  7-2-алерты-и-дашборды: backlog
+  epic-7: in-progress
+  7-1-отчёт-по-продажам: review
+  7-2-алерты-и-дашборды: review
   7-3-проверка-под-нагрузкой: backlog
-  7-4-готовность-к-запуску-для-гостей: backlog
+  7-4-готовность-к-запуску-для-гостей: in-progress
   epic-7-retrospective: optional
