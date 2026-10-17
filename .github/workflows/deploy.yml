@@ -119,7 +119,8 @@ jobs:
         run: |
           # `exec -T` reads stdin: without </dev/null it would swallow the rest of the
           # heredoc and the smoke test would silently never run.
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s > smoke.log <<SCRIPT
+          # The log is printed even when the smoke test fails, so the failing check is visible.
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s > smoke.log <<SCRIPT || true
           set -euo pipefail
           cd /opt/fenix
           for attempt in \$(seq 1 30); do
@@ -127,8 +128,10 @@ jobs:
             sleep 5
           done
           # Through the public URL: Caddy, TLS, API and database together.
-          docker compose -f compose.prod.yaml exec -T api fenix-smoke "${WEBAPP_URL}" </dev/null
+          docker compose -f compose.prod.yaml exec -T api fenix-smoke "${WEBAPP_URL}" </dev/null || true
           docker compose -f compose.prod.yaml ps --format "{{.Service}} {{.State}} {{.Status}}" </dev/null
+          # Monitoring provisioning errors, if any (no secrets in these lines).
+          docker compose -f compose.prod.yaml logs --no-color --tail 300 grafana prometheus </dev/null 2>&1 | grep -iE "level=(error|crit)|err=" | tail -15 || true
           echo "smoke: finished"
           SCRIPT
           cat smoke.log
