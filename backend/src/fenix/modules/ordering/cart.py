@@ -36,6 +36,11 @@ class CartLine:
     total_price: int | None
     # None when the line can be ordered; otherwise why not (unavailable, …).
     problem: str | None
+    # Before the promotion (FR-5); equal to total_price without one.
+    original_total_price: int | None = None
+    original_unit_price: int | None = None
+    promotion_title: str | None = None
+    discount_percent: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +49,7 @@ class CartView:
     # Kopecks of the lines that can be ordered now.
     total: int
     count: int
+    original_total: int = 0
 
 
 def _title(quote: catalog.Quote) -> str:
@@ -64,7 +70,12 @@ async def _cart(session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUI
     return (await session.execute(statement)).scalar_one()
 
 
-async def view(session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID) -> CartView:
+async def view(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    location_id: uuid.UUID,
+    claimed_promotion_id: uuid.UUID | None = None,
+) -> CartView:
     cart = (
         await session.execute(
             select(Cart).where(Cart.user_id == user_id, Cart.location_id == location_id)
@@ -80,6 +91,7 @@ async def view(session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID
             size_id=item.size_id,
             modifier_ids=modifier_ids,
             quantity=item.quantity,
+            claimed_promotion_id=claimed_promotion_id,
         )
         problem = quote.problem
         if problem is None and quote.price is not None and not quote.price.complete:
@@ -99,12 +111,19 @@ async def view(session: AsyncSession, user_id: uuid.UUID, location_id: uuid.UUID
                 unit_price=priced.unit_price if priced else None,
                 total_price=priced.total_price if priced else None,
                 problem=problem,
+                original_unit_price=priced.original_unit_price if priced else None,
+                original_total_price=(
+                    priced.original_unit_price * item.quantity if priced else None
+                ),
+                promotion_title=priced.promotion_title if priced else None,
+                discount_percent=priced.discount_percent if priced else 0,
             )
         )
     return CartView(
         lines=lines,
         total=sum(line.total_price or 0 for line in lines),
         count=sum(line.quantity for line in lines if line.problem is None),
+        original_total=sum(line.original_total_price or 0 for line in lines),
     )
 
 

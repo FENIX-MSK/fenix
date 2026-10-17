@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fenix.modules.locations import editor, hours, seed, service
+from fenix.modules.locations import editor, hours, seed, service, settings
 from fenix.modules.locations.editor import (
     HoursInput,
     LocationEditError,
@@ -17,29 +17,39 @@ from fenix.modules.locations.editor import (
 )
 from fenix.modules.locations.hours import OpeningStatus, format_time
 from fenix.modules.locations.models import Location
+from fenix.modules.locations.settings import KitchenOverride, LoadLevel, OrderParams, Pauses
+from fenix.platform import outbox
 from fenix.platform.images import MAX_UPLOAD_BYTES as MAX_PHOTO_BYTES
 from fenix.platform.images import ImageRejectedError, shrink
 
 __all__ = [
     "MAX_PHOTO_BYTES",
     "HoursInput",
+    "KitchenOverride",
+    "LoadLevel",
     "LocationEditError",
     "LocationInfo",
     "LocationInput",
     "OpeningInterval",
     "OpeningStatus",
+    "OrderParams",
     "OrderSettings",
+    "Pauses",
     "SocialLink",
     "SocialLinkInput",
     "add_photo",
     "format_time",
     "get_default_location",
     "get_default_location_id",
+    "get_order_params",
     "get_order_settings",
     "prepare_photo",
     "remove_photo",
     "seed_defaults",
+    "set_kitchen_override",
+    "set_pauses",
     "update_location",
+    "update_order_params",
 ]
 
 
@@ -143,6 +153,17 @@ class OrderSettings:
     prep_minutes: int
     unpaid_timeout_minutes: int
     status: OpeningStatus
+    slot_step_minutes: int = 15
+    delivery_enabled: bool = True
+    delivery_fee: int = 0
+    orders_paused: bool = False
+    delivery_paused: bool = False
+    load_moderate_from: int = 4
+    load_busy_from: int = 8
+    load_moderate_extra: int = 10
+    load_busy_extra: int = 20
+    # The manual kitchen level, if one is in force at `now`.
+    kitchen_override: KitchenOverride | None = None
 
 
 async def get_order_settings(
@@ -155,9 +176,60 @@ async def get_order_settings(
     intervals = [
         hours.Interval(row.weekday, row.opens_at, row.closes_at) for row in location.opening_hours
     ]
+    override = None
+    if location.kitchen_override and (
+        location.kitchen_override_until is None or location.kitchen_override_until > now
+    ):
+        override = KitchenOverride(location.kitchen_override, location.kitchen_override_until)  # type: ignore[arg-type]
     return OrderSettings(
         timezone=location.timezone,
         prep_minutes=location.prep_minutes,
         unpaid_timeout_minutes=location.unpaid_timeout_minutes,
         status=hours.opening_status(intervals, location.timezone, now),
+        slot_step_minutes=location.slot_step_minutes,
+        delivery_enabled=location.delivery_enabled,
+        delivery_fee=location.delivery_fee,
+        orders_paused=location.orders_paused,
+        delivery_paused=location.delivery_paused,
+        load_moderate_from=location.load_moderate_from,
+        load_busy_from=location.load_busy_from,
+        load_moderate_extra=location.load_moderate_extra,
+        load_busy_extra=location.load_busy_extra,
+        kitchen_override=override,
     )
+
+
+async def get_order_params(session: AsyncSession, location_id: uuid.UUID) -> OrderParams:
+    return await settings.get_params(session, location_id)
+
+
+async def update_order_params(
+    session: AsyncSession, location_id: uuid.UUID, data: OrderParams
+) -> None:
+    """Raises LocationEditError bad_params."""
+    await settings.update_params(session, location_id, data)
+
+
+async def set_pauses(
+    session: AsyncSession,
+    location_id: uuid.UUID,
+    *,
+    orders_paused: bool | None = None,
+    delivery_paused: bool | None = None,
+) -> Pauses:
+    """«Приём заказов приостановлен» / «Доставка приостановлена» (FR-30)."""
+    return await settings.set_pauses(
+        session, location_id, orders_paused=orders_paused, delivery_paused=delivery_paused
+    )
+
+
+async def set_kitchen_override(
+    session: AsyncSession,
+    location_id: uuid.UUID,
+    level: LoadLevel | None,
+    minutes: int | None,
+    now: datetime,
+) -> None:
+    """Emits `locations.kitchen.load_changed` so every board updates at once."""
+    await settings.set_kitchen_override(session, location_id, level, minutes, now)
+    outbox.emit(session, "locations.kitchen.load_changed", {"location_id": str(location_id)})

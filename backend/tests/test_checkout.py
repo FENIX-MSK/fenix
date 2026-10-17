@@ -35,7 +35,7 @@ def test_first_checkout_asks_for_phone_and_consent(
     body = client.get("/api/v1/checkout", headers=auth_headers).json()
     assert body["is_open"] is True
     assert body["asap_minutes"] == 20
-    assert body["fulfilment"] == ["pickup"]
+    assert body["fulfilment"] == ["pickup", "delivery"]
     assert body["contact"] == {"first_name": "Аня", "phone": None, "has_consent": False}
 
 

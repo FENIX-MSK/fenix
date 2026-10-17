@@ -12,13 +12,14 @@ import signal
 from datetime import UTC, datetime
 
 import structlog
+from aiogram import Bot
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from fenix.modules.notifications import api as notifications
 from fenix.modules.ordering import api as ordering
 from fenix.modules.payments import api as payments
-from fenix.platform import realtime
+from fenix.platform import metrics, outbox, realtime
 from fenix.platform.config import get_settings
 from fenix.platform.db import create_engine, create_session_factory
 from fenix.platform.logging import configure_logging
@@ -29,7 +30,7 @@ from fenix.telegram.gateway import TelegramGateway
 log = structlog.get_logger()
 
 POLL_SECONDS = 0.5
-SWEEP_SECONDS = 30.0
+SWEEP_SECONDS = 20.0
 
 
 def realtime_handler(redis: Redis) -> Handler:
@@ -39,12 +40,13 @@ def realtime_handler(redis: Redis) -> Handler:
         payload = event.payload
         signal = {
             "event": event.name,
-            "order_id": payload["order_id"],
+            "order_id": payload.get("order_id"),
             "status": payload.get("status"),
             "version": payload.get("version"),
         }
         await realtime.publish(redis, realtime.staff_channel(payload["location_id"]), signal)
-        await realtime.publish(redis, realtime.order_channel(payload["order_id"]), signal)
+        if payload.get("order_id"):
+            await realtime.publish(redis, realtime.order_channel(payload["order_id"]), signal)
 
     return handle
 
@@ -59,7 +61,7 @@ def build_dispatcher(
         *notifications.subscriptions(gateway, links),
     ]:
         dispatcher.subscribe(subscription.pattern, subscription.name, subscription.handler)
-    for pattern in ("ordering.order.*", "payments.payment.*"):
+    for pattern in ("ordering.order.*", "payments.payment.*", "locations.kitchen.*"):
         dispatcher.subscribe(pattern, "realtime.signal", realtime_handler(redis))
     return dispatcher
 
@@ -78,6 +80,53 @@ async def cancel_overdue_unpaid(factory: async_sessionmaker[AsyncSession], now: 
     if cancelled:
         log.info("worker.unpaid_cancelled", count=cancelled)
     return cancelled
+
+
+async def release_due_preorders(factory: async_sessionmaker[AsyncSession], now: datetime) -> int:
+    """Story 5.5: a preorder goes to the kitchen 30 minutes before its slot (AD-13)."""
+    async with factory() as session:
+        due = await ordering.due_scheduled(session, now)
+    released = 0
+    for order_id in due:
+        async with factory() as session, session.begin():
+            if await ordering.release_scheduled(session, order_id, now):
+                released += 1
+    if released:
+        log.info("worker.preorders_released", count=released)
+    return released
+
+
+METRICS_SECONDS = 15.0
+TELEGRAM_PROBE_SECONDS = 60.0
+
+
+async def update_metrics(factory: async_sessionmaker[AsyncSession], now: datetime) -> None:
+    async with factory() as session:
+        pending, oldest = await outbox.stats(session, now)
+        counts = await ordering.count_by_status(session)
+    metrics.OUTBOX_PENDING.set(pending)
+    metrics.OUTBOX_OLDEST.set(oldest)
+    for status in (
+        "pending_payment",
+        "scheduled",
+        "new",
+        "accepted",
+        "cooking",
+        "ready",
+        "delivering",
+    ):
+        metrics.ORDERS.labels(status=status).set(counts.get(status, 0))
+
+
+async def probe_telegram(bot: Bot) -> None:
+    """tg-egress health as Telegram sees it: the Bot API answers through the tunnel."""
+    try:
+        await asyncio.wait_for(bot.get_me(), 15)
+    except Exception as exc:
+        log.warning("worker.telegram_unreachable", error=repr(exc))
+        metrics.TELEGRAM_UP.set(0)
+    else:
+        metrics.TELEGRAM_UP.set(1)
 
 
 async def run() -> None:
@@ -101,8 +150,9 @@ async def run() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
 
+    metrics.serve(metrics.WORKER_PORT)
     log.info("worker.started")
-    last_sweep = 0.0
+    last_sweep = last_metrics = last_probe = 0.0
     try:
         while not stop.is_set():
             try:
@@ -110,6 +160,14 @@ async def run() -> None:
                 if loop.time() - last_sweep >= SWEEP_SECONDS:
                     last_sweep = loop.time()
                     await cancel_overdue_unpaid(factory, datetime.now(UTC))
+                    await release_due_preorders(factory, datetime.now(UTC))
+                if loop.time() - last_metrics >= METRICS_SECONDS:
+                    last_metrics = loop.time()
+                    metrics.WORKER_HEARTBEAT.set_to_current_time()
+                    await update_metrics(factory, datetime.now(UTC))
+                if loop.time() - last_probe >= TELEGRAM_PROBE_SECONDS:
+                    last_probe = loop.time()
+                    await probe_telegram(bot)
             except Exception:
                 # The database or Redis blinked: keep the process, try again shortly.
                 log.exception("worker.iteration_failed")

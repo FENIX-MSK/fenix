@@ -7,7 +7,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
 from starlette.types import Lifespan
 
-from fenix.http import health, ws
+from fenix.http import alerts, health, ws
 from fenix.http.router import api_v1
 from fenix.platform.config import Settings, get_settings
 from fenix.platform.db import create_engine, create_session_factory
@@ -45,6 +45,7 @@ def build_app(lifespan: Lifespan[FastAPI] | None = None) -> FastAPI:
     app.include_router(health.router, prefix="/api")
     app.include_router(api_v1)
     app.include_router(ws.router)
+    app.include_router(alerts.router)
     Instrumentator(excluded_handlers=["/metrics", "/api/health"]).instrument(app).expose(
         app, include_in_schema=False
     )

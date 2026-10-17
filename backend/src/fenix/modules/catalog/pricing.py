@@ -1,4 +1,4 @@
-"""The only place a price is computed (AD-6). Promotions join here in epic 6."""
+"""The only place a price is computed (AD-6), promotions included."""
 
 import uuid
 from collections import Counter
@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from fenix.modules.catalog import promotions
 from fenix.modules.catalog.dish import dish_groups, load_stop_list, load_visible_dish
 from fenix.modules.catalog.models import Dish, Modifier
 
@@ -34,6 +35,11 @@ class Price:
     # False while a required group has fewer choices than its minimum.
     complete: bool
     missing_groups: list[MissingGroup]
+    # Before the promotion; equal to unit_price when none applies.
+    original_unit_price: int = 0
+    promotion_id: uuid.UUID | None = None
+    promotion_title: str | None = None
+    discount_percent: int = 0
 
 
 async def price(
@@ -44,6 +50,8 @@ async def price(
     size_id: uuid.UUID,
     modifier_ids: list[uuid.UUID],
     quantity: int,
+    claimed_promotion_id: uuid.UUID | None = None,
+    active_promotions: list[promotions.PromotionView] | None = None,
 ) -> Price:
     if quantity < 1:
         raise InvalidSelectionError("bad_quantity")
@@ -73,14 +81,21 @@ async def price(
         raise InvalidSelectionError("too_many")
     missing = [MissingGroup(g.id, g.name) for g in groups if chosen_per_group[g.id] < g.min_choice]
 
-    unit_price = size.price + sum(
-        modifiers[modifier_id].price_delta for modifier_id in modifier_ids
-    )
+    original = size.price + sum(modifiers[modifier_id].price_delta for modifier_id in modifier_ids)
+    if active_promotions is None:
+        today = await promotions.local_today(session, location_id)
+        active_promotions = await promotions.active(session, location_id, today)
+    promotion = promotions.best_for(active_promotions, dish.category_id, claimed_promotion_id)
+    unit_price = promotions.discounted(original, promotion.percent) if promotion else original
     return Price(
         unit_price=unit_price,
         total_price=unit_price * quantity,
         complete=not missing,
         missing_groups=missing,
+        original_unit_price=original,
+        promotion_id=promotion.id if promotion else None,
+        promotion_title=promotion.title if promotion else None,
+        discount_percent=promotion.percent if promotion else 0,
     )
 
 
@@ -105,6 +120,7 @@ async def quote(
     size_id: uuid.UUID,
     modifier_ids: list[uuid.UUID],
     quantity: int,
+    claimed_promotion_id: uuid.UUID | None = None,
 ) -> Quote:
     dish = await session.get(Dish, dish_id, options=[selectinload(Dish.sizes)])
     size = next((s for s in dish.sizes if s.id == size_id), None) if dish else None
@@ -122,6 +138,7 @@ async def quote(
             size_id=size_id,
             modifier_ids=modifier_ids,
             quantity=quantity,
+            claimed_promotion_id=claimed_promotion_id,
         )
         problem = None
     except InvalidSelectionError as exc:

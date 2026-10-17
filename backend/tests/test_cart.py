@@ -116,7 +116,7 @@ def test_quantity_and_remove(guest: Guest) -> None:
     emptied = guest.client.patch(
         f"/api/v1/cart/items/{line_id}", headers=guest.headers, json={"quantity": 0}
     )
-    assert emptied.json() == {"lines": [], "total": 0, "count": 0}
+    assert emptied.json() == {"lines": [], "total": 0, "count": 0, "original_total": 0}
     guest.add(guest.menu_dish("Филадельфия"))
     line_id = guest.cart()["lines"][0]["id"]
     assert (

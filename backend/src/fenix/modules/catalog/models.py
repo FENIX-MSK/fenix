@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -187,3 +188,34 @@ class StopListEntry(Base):
         ForeignKey("catalog_modifiers.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = _created_at()
+
+
+class Promotion(Base):
+    """A percentage discount on the whole menu or a category (FR-32)."""
+
+    __tablename__ = "catalog_promotions"
+    __table_args__ = (
+        CheckConstraint("percent BETWEEN 1 AND 100", name="percent_range"),
+        CheckConstraint(
+            "ends_on IS NULL OR starts_on IS NULL OR ends_on >= starts_on", name="dates"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+    location_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("locations_locations.id", ondelete="CASCADE"), index=True
+    )
+    # What guests read, e.g. the birthday discount banner.
+    title: Mapped[str] = mapped_column(String(256))
+    percent: Mapped[int] = mapped_column(SmallInteger)
+    # None: the whole menu.
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("catalog_categories.id", ondelete="CASCADE")
+    )
+    # Inclusive local dates of the location; None: no bound.
+    starts_on: Mapped[date | None] = mapped_column(Date)
+    ends_on: Mapped[date | None] = mapped_column(Date)
+    # "auto" applies by itself; "checked" is claimed by the guest and confirmed by staff.
+    kind: Mapped[str] = mapped_column(String(16), default="auto")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

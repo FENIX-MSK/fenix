@@ -21,7 +21,7 @@ worker, tg-egress, Postgres, Redis, Garage (S3, photos at `/media/*`), Prometheu
 Alloy, Grafana (`/grafana`).
 
 Garage needs no manual setup: the deploy generates its secrets in `/opt/fenix/.env`
-(`GARAGE_RPC_SECRET`, `GARAGE_ADMIN_TOKEN`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`)
+(`GARAGE_RPC_SECRET`, `GARAGE_ADMIN_TOKEN`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `ALERTS_WEBHOOK_TOKEN`)
 and `fenix-seed` in the `migrate` service creates the layout, the `media` bucket, the key
 and website access through the admin API.
 
@@ -60,3 +60,15 @@ writes them into `/opt/fenix/.env`:
 After the rollout the workflow runs `fenix-smoke "$WEBAPP_URL"` inside the API container:
 it walks the guest path through the public URL with launch data signed by the bot
 token and fails the deploy on any broken step.
+
+## Monitoring and alerts
+
+Grafana (`https://<site>/grafana/`) provisions the «Fenix — обзор» dashboard and the alert
+rules from `infra/monitoring/grafana/provisioning/`: api, worker or bot down for 2 minutes,
+Telegram unreachable through tg-egress, more than 2% of 5xx in 5 minutes, an outbox event
+older than 5 minutes. Prometheus scrapes the API (`/metrics`), the worker (`:9101`) and the
+bot (`:9102`).
+
+Alerts go to Grafana's webhook contact point → `POST /api/internal/alerts` on the API (not
+routed by Caddy, bearer `ALERTS_WEBHOOK_TOKEN`) → the outbox → the Telegram chat bound by a
+staff member sending `/alerts` in that group. Until a chat is bound, alerts are only logged.
