@@ -1164,3 +1164,46 @@ a {
   font-size: 18px;
   font-weight: 600;
 }
+
+.order-status {
+  margin: var(--space-2) 0 0;
+  font-size: 18px;
+  color: var(--gold-text);
+}
+
+.order-status.cancelled {
+  color: var(--error);
+}
+
+.order-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.order-line,
+.order-total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.order-line + .order-line {
+  border-top: 1px solid var(--line);
+}
+
+.order-line .caption {
+  margin: 2px 0 0;
+}
+
+.card .order-total {
+  margin: var(--space-2) 0 0;
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.order-line .price,
+.order-total .price {
+  white-space: nowrap;
+}

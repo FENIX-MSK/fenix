@@ -1,19 +1,23 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 
-import type { MenuDish } from './api/types'
+import { api } from './api/client'
+import type { MenuDish, Order } from './api/types'
 import { AboutScreen } from './guest/AboutScreen'
 import { CartBar } from './guest/CartBar'
 import { CartScreen } from './guest/CartScreen'
-import { CheckoutScreen } from './guest/CheckoutScreen'
+import { CheckoutScreen, type PlaceOrder } from './guest/CheckoutScreen'
 import { DishSheet } from './guest/DishSheet'
 import { Header } from './guest/Header'
 import { MenuScreen } from './guest/MenuScreen'
+import { OrderScreen } from './guest/OrderScreen'
+import { orderErrorText } from './guest/orderTexts'
+import { useCart } from './guest/cart'
 import { useLocationInfo } from './guest/useLocationInfo'
 import { useMe } from './guest/useMe'
 import { useMenu } from './guest/useMenu'
 import { platform } from './platform'
 
-type Screen = 'menu' | 'about' | 'staff' | 'cart' | 'checkout'
+type Screen = 'menu' | 'about' | 'staff' | 'cart' | 'checkout' | 'order'
 
 const StaffApp = lazy(() => import('./staff/StaffApp'))
 
@@ -36,6 +40,28 @@ export default function App() {
   const openMenu = useCallback(() => setScreen('menu'), [])
   const [openDish, setOpenDish] = useState<MenuDish | null>(null)
   const closeDish = useCallback(() => setOpenDish(null), [])
+  const [order, setOrder] = useState<Order | null>(null)
+  const { reload: reloadCart } = useCart()
+
+  const placeOrder = useCallback(
+    async ({ paymentMethod, comment }: PlaceOrder): Promise<string | null> => {
+      try {
+        const { data, error } = await api.POST('/api/v1/orders', { body: { payment_method: paymentMethod, comment } })
+        if (!data) {
+          reloadCart()
+          return orderErrorText(error?.error.code)
+        }
+        platform.haptic('success')
+        setOrder(data)
+        reloadCart()
+        setScreen('order')
+        return null
+      } catch {
+        return orderErrorText(undefined)
+      }
+    },
+    [reloadCart],
+  )
 
   if (screen === 'staff' && isStaff) {
     return (
@@ -45,7 +71,8 @@ export default function App() {
     )
   }
   if (screen === 'cart') return <CartScreen onBack={openMenu} onCheckout={() => setScreen('checkout')} />
-  if (screen === 'checkout') return <CheckoutScreen onBack={() => setScreen('cart')} />
+  if (screen === 'checkout') return <CheckoutScreen onBack={() => setScreen('cart')} onPlace={placeOrder} />
+  if (screen === 'order' && order) return <OrderScreen orderId={order.id} initial={order} onBack={openMenu} />
   if (screen === 'about') {
     return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
   }

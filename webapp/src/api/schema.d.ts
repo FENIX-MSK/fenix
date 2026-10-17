@@ -192,6 +192,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Place Order */
+        post: operations["place_order_api_v1_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Order */
+        get: operations["get_order_api_v1_orders__order_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/catalog": {
         parameters: {
             query?: never;
@@ -1002,6 +1036,58 @@ export interface components {
             /** Ids */
             ids: string[];
         };
+        /** OrderLineOut */
+        OrderLineOut: {
+            /** Modifier Names */
+            modifier_names: string[];
+            /** Quantity */
+            quantity: number;
+            /** Title */
+            title: string;
+            /** Total Price */
+            total_price: number;
+            /** Unit Price */
+            unit_price: number;
+        };
+        /** OrderOut */
+        OrderOut: {
+            /** Comment */
+            comment: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Fulfilment */
+            fulfilment: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: components["schemas"]["OrderLineOut"][];
+            /**
+             * Number
+             * @description «#047»
+             */
+            number: string;
+            /** Payment Method */
+            payment_method: string;
+            /**
+             * Payment Status
+             * @description unpaid, paid or refunded
+             */
+            payment_status: string;
+            /** Ready At */
+            ready_at: string | null;
+            /** Status */
+            status: string;
+            /** Total */
+            total: number;
+            /** Version */
+            version: number;
+        };
         /** PhotoOut */
         PhotoOut: {
             /** Photo Url */
@@ -1011,6 +1097,19 @@ export interface components {
         PhotosOut: {
             /** Photos */
             photos: string[];
+        };
+        /** PlaceIn */
+        PlaceIn: {
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /**
+             * Payment Method
+             * @enum {string}
+             */
+            payment_method: "online" | "cash" | "card";
         };
         /** PriceIn */
         PriceIn: {
@@ -1735,6 +1834,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PriceOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    place_order_api_v1_orders_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_order_api_v1_orders__order_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
                 };
             };
             /** @description Client error */
