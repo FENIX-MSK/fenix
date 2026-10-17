@@ -794,6 +794,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/reports/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sales */
+        get: operations["sales_api_v1_staff_reports_sales_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/stop-list": {
         parameters: {
             query?: never;
@@ -1096,6 +1113,15 @@ export interface components {
             portion: string | null;
             /** Sizes */
             sizes: components["schemas"]["SizeOut"][];
+        };
+        /** DishSalesOut */
+        DishSalesOut: {
+            /** Quantity */
+            quantity: number;
+            /** Revenue */
+            revenue: number;
+            /** Title */
+            title: string;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1748,6 +1774,47 @@ export interface components {
             cart: components["schemas"]["CartOut"];
             /** Skipped */
             skipped: string[];
+        };
+        /** SalesOut */
+        SalesOut: {
+            /** Average Check */
+            average_check: number;
+            /** By Fulfilment */
+            by_fulfilment: {
+                [key: string]: number;
+            };
+            /** By Payment */
+            by_payment: {
+                [key: string]: number;
+            };
+            /** Cancel Reasons */
+            cancel_reasons: {
+                [key: string]: number;
+            };
+            /** Cancelled */
+            cancelled: number;
+            /** Completed */
+            completed: number;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** New Guests */
+            new_guests: {
+                [key: string]: number;
+            };
+            /** Orders */
+            orders: number;
+            /** Revenue */
+            revenue: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Top Dishes */
+            top_dishes: components["schemas"]["DishSalesOut"][];
         };
         /** SizeIn */
         SizeIn: {
@@ -4385,6 +4452,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    sales_api_v1_staff_reports_sales_get: {
+        parameters: {
+            query?: {
+                period?: "day" | "week" | "month" | "custom";
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOut"];
                 };
             };
             /** @description Client error */

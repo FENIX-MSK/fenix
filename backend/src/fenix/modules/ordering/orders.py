@@ -688,3 +688,15 @@ async def decide_discount(
     decided = view(order)
     await emit_event(session, decided, action, actor.kind)
     return decided
+
+
+async def orders_between(
+    session: AsyncSession, location_id: uuid.UUID, start: datetime, end: datetime
+) -> list[OrderView]:
+    """Orders created in [start, end), for reports (FR-36)."""
+    statement = (
+        select(Order)
+        .where(Order.location_id == location_id, Order.created_at >= start, Order.created_at < end)
+        .order_by(Order.created_at)
+    )
+    return [view(order) for order in (await session.execute(statement)).scalars()]

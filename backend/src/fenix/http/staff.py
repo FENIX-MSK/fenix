@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from fenix.http import staff_catalog, staff_location, staff_orders, staff_promotions
+from fenix.http import staff_catalog, staff_location, staff_orders, staff_promotions, staff_reports
 from fenix.http.auth import CurrentStaff, LocationIdDep, current_staff
 from fenix.http.deps import SessionDep, SettingsDep
 from fenix.modules.identity import api as identity
@@ -18,6 +18,7 @@ router.include_router(staff_catalog.router)
 router.include_router(staff_location.router)
 router.include_router(staff_orders.router)
 router.include_router(staff_promotions.router)
+router.include_router(staff_reports.router)
 
 
 class StaffMe(BaseModel):

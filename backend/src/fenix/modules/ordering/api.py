@@ -56,6 +56,7 @@ __all__ = [
     "is_allowed",
     "kitchen_load",
     "list_orders",
+    "orders_between",
     "overdue_unpaid",
     "place_order",
     "preorder_slots",
@@ -167,6 +168,13 @@ async def view_cart_with_claim(
 ) -> CartView:
     """The cart as it would be with the claimed discount: the preliminary total (FR-11)."""
     return await cart.view(session, user_id, location_id, promotion_id)
+
+
+async def orders_between(
+    session: AsyncSession, location_id: uuid.UUID, start: datetime, end: datetime
+) -> list[OrderView]:
+    """Orders created in [start, end) with their lines and log (reports)."""
+    return await orders.orders_between(session, location_id, start, end)
 
 
 def is_allowed(order: OrderView, action: str, actor: ActorKind) -> bool:

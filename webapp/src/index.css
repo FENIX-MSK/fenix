@@ -1607,3 +1607,19 @@ a {
   border: 1px dashed var(--gold);
   font-weight: 600;
 }
+
+.report-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.report-kpis .card {
+  margin-top: var(--space-3);
+}
+
+.report-big {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+}
