@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { platform } from '../platform'
 import { MenuEditor } from './menu/MenuEditor'
 import { MoreScreen, type MoreSection } from './MoreScreen'
-import { Placeholder } from './Placeholder'
+import { Board } from './orders/Board'
 import { StopList } from './StopList'
 
 type Tab = 'orders' | 'stop-list' | 'menu' | 'more'
@@ -17,10 +17,12 @@ const TABS: { id: Tab; label: string }[] = [
 
 interface Props {
   onExit: () => void
+  /** Open this order's card on the board (deep link from the staff chat). */
+  openOrderId?: string | null
 }
 
 /** The staff section: lazy-loaded, so guests never download it (EXPERIENCE.md › IA). */
-export default function StaffApp({ onExit }: Props) {
+export default function StaffApp({ onExit, openOrderId }: Props) {
   const [tab, setTab] = useState<Tab>('orders')
   const [section, setSection] = useState<MoreSection | null>(null)
 
@@ -29,7 +31,7 @@ export default function StaffApp({ onExit }: Props) {
 
   let content: ReactNode
   if (tab === 'more') content = <MoreScreen section={section} onOpen={setSection} />
-  else if (tab === 'orders') content = <Placeholder title="Заказы" text="Новых заказов нет" />
+  else if (tab === 'orders') content = <Board openOrderId={openOrderId} />
   else if (tab === 'stop-list') content = <StopList />
   else content = <MenuEditor />
 

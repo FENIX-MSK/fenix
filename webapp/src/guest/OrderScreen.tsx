@@ -1,12 +1,12 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { api } from '../api/client'
+import { useSignals } from '../api/signals'
 import type { Order } from '../api/types'
 import { platform } from '../platform'
 import { formatPrice } from './format'
 import { FULFILMENT_LABELS, paymentText, STATUS_LABELS } from './orderTexts'
 import { NETWORK_ERROR, RETRY } from './texts'
-import { useRemote } from './useRemote'
 
 interface Props {
   orderId: string
@@ -15,16 +15,37 @@ interface Props {
   onBack: () => void
 }
 
-const time = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
+// Fallback for a silent socket (a proxy that drops it without closing).
+const POLL_MS = 30_000
+
+const time = new Intl.DateTimeFormat('ru-RU', { hour: 'numeric', minute: '2-digit' })
+
+type Loaded = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; order: Order }
 
 export function OrderScreen({ orderId, initial, onBack }: Props) {
-  const load = useCallback(
-    () => api.GET('/api/v1/orders/{order_id}', { params: { path: { order_id: orderId } } }),
-    [orderId],
-  )
-  const { state, reload } = useRemote(load)
+  const [state, setState] = useState<Loaded>(initial ? { kind: 'ready', order: initial } : { kind: 'loading' })
+
+  const refresh = useCallback(async () => {
+    try {
+      const { data } = await api.GET('/api/v1/orders/{order_id}', { params: { path: { order_id: orderId } } })
+      // Keep what is on screen if a refresh fails; only the first load shows an error.
+      if (data) setState({ kind: 'ready', order: data })
+      else setState((s) => (s.kind === 'ready' ? s : { kind: 'error' }))
+    } catch {
+      setState((s) => (s.kind === 'ready' ? s : { kind: 'error' }))
+    }
+  }, [orderId])
+
+  useEffect(() => {
+    const first = setTimeout(() => void refresh(), 0)
+    const timer = setInterval(() => void refresh(), POLL_MS)
+    return () => {
+      clearTimeout(first)
+      clearInterval(timer)
+    }
+  }, [refresh])
+  useSignals(`order:${orderId}`, () => void refresh())
   useEffect(() => platform.showBackButton(onBack), [onBack])
-  const order = state.kind === 'ready' ? state.data : initial
 
   return (
     <main className="screen order">
@@ -33,30 +54,111 @@ export function OrderScreen({ orderId, initial, onBack }: Props) {
           ← В меню
         </button>
       )}
-      {!order && state.kind === 'loading' && <div className="skeleton" style={{ height: 260, marginTop: 16 }} />}
-      {!order && state.kind === 'error' && (
+      {state.kind === 'loading' && <div className="skeleton" style={{ height: 260, marginTop: 16 }} />}
+      {state.kind === 'error' && (
         <div className="notice">
           <p>{NETWORK_ERROR}</p>
-          <button type="button" className="secondary-button" onClick={reload}>
+          <button type="button" className="secondary-button" onClick={() => void refresh()}>
             {RETRY}
           </button>
         </div>
       )}
-      {order && <OrderDetails order={order} />}
+      {state.kind === 'ready' && (
+        <>
+          <OrderDetails order={state.order} />
+          {state.order.status === 'pending_payment' && (
+            <TestPayment order={state.order} onChange={(order) => setState({ kind: 'ready', order })} />
+          )}
+        </>
+      )}
     </main>
+  )
+}
+
+function minutesLeft(until: string | null | undefined, now: number): number | null {
+  if (!until) return null
+  return Math.max(0, Math.ceil((new Date(until).getTime() - now) / 60_000))
+}
+
+/** The test provider's payment page, inside the Mini App (AD-9, story 3.5). */
+function TestPayment({ order, onChange }: { order: Order; onChange: (order: Order) => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 15_000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const run = async (call: () => Promise<{ data?: Order }>) => {
+    setBusy(true)
+    setError(null)
+    try {
+      const { data } = await call()
+      if (data) {
+        onChange(data)
+        platform.haptic(data.payment_status === 'paid' ? 'success' : 'error')
+      } else setError('Не получилось — попробуйте ещё раз.')
+    } catch {
+      setError(NETWORK_ERROR)
+    }
+    setBusy(false)
+  }
+  const answer = (succeeded: boolean) =>
+    run(() =>
+      api.POST('/api/v1/payments/{payment_id}/test-result', {
+        params: { path: { payment_id: order.payment_id! } },
+        body: { succeeded },
+      }),
+    )
+  const retry = () =>
+    run(() => api.POST('/api/v1/orders/{order_id}/payments', { params: { path: { order_id: order.id } } }))
+
+  const left = minutesLeft(order.pay_until, now)
+  return (
+    <section className="card payment">
+      <h2 className="section">Оплата</h2>
+      {order.payment_status === 'paid' && <p>Оплата прошла, передаём заказ в кафе…</p>}
+      {order.payment_status === 'pending' && order.payment_id && (
+        <>
+          <p className="muted">Тестовый режим: деньги не списываются.</p>
+          <div className="button-row">
+            <button type="button" className="primary-button" disabled={busy} onClick={() => answer(true)}>
+              Оплатить · {formatPrice(order.total)}
+            </button>
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => answer(false)}>
+              Отказ банка (тест)
+            </button>
+          </div>
+        </>
+      )}
+      {order.payment_status === 'failed' && (
+        <>
+          <p>Оплата не прошла.</p>
+          <button type="button" className="primary-button" disabled={busy} onClick={retry}>
+            Повторить
+          </button>
+        </>
+      )}
+      {left !== null && order.payment_status !== 'paid' && (
+        <p className="caption muted">
+          {left > 0 ? `Осталось ${left} мин — потом заказ отменится.` : 'Время на оплату вышло, заказ отменяется.'}
+        </p>
+      )}
+      {error && <p className="error-text">{error}</p>}
+    </section>
   )
 }
 
 export function OrderDetails({ order }: { order: Order }) {
   const cancelled = order.status === 'cancelled'
+  const showReady = order.ready_at && ['accepted', 'cooking'].includes(order.status)
   return (
     <>
-      <h1 className="title staff-title">Заказ {order.number}</h1>
-      <p className={cancelled ? 'order-status cancelled' : 'order-status'} role="status">
+      <h1 className="title order-number">Заказ {order.number}</h1>
+      <p className={cancelled ? 'order-status cancelled' : 'order-status'} role="status" aria-live="polite">
         {STATUS_LABELS[order.status] ?? order.status}
-        {order.ready_at && !cancelled && order.status !== 'handed_over' && (
-          <span className="muted"> · к {time.format(new Date(order.ready_at))}</span>
-        )}
+        {showReady && <span className="muted"> · готов к {time.format(new Date(order.ready_at!))}</span>}
       </p>
       <section className="card">
         <h2 className="section">Состав</h2>

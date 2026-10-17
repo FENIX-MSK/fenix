@@ -1,7 +1,7 @@
 """The guest's orders and their online payment (FR-12, FR-13)."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter
@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from fenix.http.auth import CurrentUser, LocationIdDep
 from fenix.http.checkout import PaymentMethod
 from fenix.http.deps import SessionDep
+from fenix.modules.locations import api as locations
 from fenix.modules.ordering import api as ordering
 from fenix.modules.payments import api as payments
 from fenix.platform.errors import ApiError
@@ -35,6 +36,8 @@ class OrderOut(BaseModel):
     payment_status: Literal["unpaid", "pending", "failed", "paid", "refunded"]
     # The online attempt the guest can still complete (test payment screen).
     payment_id: uuid.UUID | None
+    # Unpaid online orders are cancelled at this moment (FR-13).
+    pay_until: datetime | None = None
     comment: str
     total: int
     created_at: datetime
@@ -101,7 +104,11 @@ async def own_order(
 
 
 async def present(session: SessionDep, order: ordering.OrderView) -> OrderOut:
-    return order_out(order, await payments.order_payment(session, order.id))
+    out = order_out(order, await payments.order_payment(session, order.id))
+    if order.status == "pending_payment":
+        settings = await locations.get_order_settings(session, order.location_id, order.created_at)
+        out.pay_until = order.created_at + timedelta(minutes=settings.unpaid_timeout_minutes)
+    return out
 
 
 @router.post("/orders")

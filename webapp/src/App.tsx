@@ -30,9 +30,14 @@ function useTheme() {
   }, [])
 }
 
+// Deep links: `?order=<id>` from a chat button opens that order; `&staff=1` on the board.
+const launch = new URLSearchParams(window.location.search)
+const LINKED_ORDER = launch.get('order')
+const LINKED_FOR_STAFF = launch.get('staff') === '1'
+
 export default function App() {
   useTheme()
-  const [screen, setScreen] = useState<Screen>('menu')
+  const [screen, setScreen] = useState<Screen>(LINKED_ORDER ? (LINKED_FOR_STAFF ? 'staff' : 'order') : 'menu')
   const { state: location, reload: reloadLocation } = useLocationInfo()
   const { state: menu, reload: reloadMenu } = useMenu()
   const { state: me } = useMe()
@@ -40,7 +45,9 @@ export default function App() {
   const openMenu = useCallback(() => setScreen('menu'), [])
   const [openDish, setOpenDish] = useState<MenuDish | null>(null)
   const closeDish = useCallback(() => setOpenDish(null), [])
-  const [order, setOrder] = useState<Order | null>(null)
+  const [order, setOrder] = useState<{ id: string; initial?: Order } | null>(
+    LINKED_ORDER && !LINKED_FOR_STAFF ? { id: LINKED_ORDER } : null,
+  )
   const { reload: reloadCart } = useCart()
 
   const placeOrder = useCallback(
@@ -52,7 +59,7 @@ export default function App() {
           return orderErrorText(error?.error.code)
         }
         platform.haptic('success')
-        setOrder(data)
+        setOrder({ id: data.id, initial: data })
         reloadCart()
         setScreen('order')
         return null
@@ -66,13 +73,15 @@ export default function App() {
   if (screen === 'staff' && isStaff) {
     return (
       <Suspense fallback={<div className="screen" aria-busy="true" />}>
-        <StaffApp onExit={openMenu} />
+        <StaffApp onExit={openMenu} openOrderId={LINKED_FOR_STAFF ? LINKED_ORDER : null} />
       </Suspense>
     )
   }
+  // Waiting to learn whether the user is staff before falling back to the menu.
+  if (screen === 'staff' && me.kind === 'loading') return <div className="screen" aria-busy="true" />
   if (screen === 'cart') return <CartScreen onBack={openMenu} onCheckout={() => setScreen('checkout')} />
   if (screen === 'checkout') return <CheckoutScreen onBack={() => setScreen('cart')} onPlace={placeOrder} />
-  if (screen === 'order' && order) return <OrderScreen orderId={order.id} initial={order} onBack={openMenu} />
+  if (screen === 'order' && order) return <OrderScreen orderId={order.id} initial={order.initial} onBack={openMenu} />
   if (screen === 'about') {
     return <AboutScreen location={location} onBack={openMenu} onRetry={reloadLocation} />
   }

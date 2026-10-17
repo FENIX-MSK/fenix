@@ -22,7 +22,7 @@ def local_time(payload: dict[str, Any], key: str) -> str | None:
     if not value:
         return None
     moment = datetime.fromisoformat(value).astimezone(ZoneInfo(payload["timezone"]))
-    return moment.strftime("%H:%M")
+    return f"{moment.hour}:{moment.minute:02d}"
 
 
 def lines_text(payload: dict[str, Any]) -> str:
@@ -55,23 +55,21 @@ def guest_message(event: str, payload: dict[str, Any]) -> str | None:
     if event == "accepted":
         at = local_time(payload, "ready_at")
         when = f" Будет готов к {at}." if at else ""
-        return f"Кафе приняло заказ {number(payload)}.{when}"
+        return f"Заказ {number(payload)} принят.{when}"
     if event == "ready":
         if payload["fulfilment"] == "pickup":
-            return f"Заказ {number(payload)} готов — можно забирать!"
-        return f"Заказ {number(payload)} готов и скоро поедет к вам."
+            return f"Заказ {number(payload)} готов — ждём вас у кассы."
+        return None
     if event == "dispatched":
-        return f"Заказ {number(payload)} в пути."
-    if event == "delivered":
-        return f"Заказ {number(payload)} доставлен. Приятного аппетита!"
+        return f"Заказ {number(payload)} уже едет к вам."
     if event == "cancelled":
         # The staff's reason stays inside the cafe (FR-22).
         if payload.get("unpaid_timeout"):
             text = f"Заказ {number(payload)} отменён: оплата не поступила вовремя."
         else:
-            text = f"Заказ {number(payload)} отменён."
+            text = f"К сожалению, заказ {number(payload)} отменён."
         if payload.get("refunded"):
-            text += " Деньги вернутся тем же способом, которым вы платили."
+            text += " Деньги за онлайн-оплату вернутся."
         return text
     return None
 

@@ -226,6 +226,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/{order_id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Payment
+         * @description «Повторить» after a failed online payment: a new attempt.
+         */
+        post: operations["retry_payment_api_v1_orders__order_id__payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/{payment_id}/test-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Payment Result
+         * @description The test provider (AD-9): the guest says whether the payment «went through».
+         */
+        post: operations["test_payment_result_api_v1_payments__payment_id__test_result_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/catalog": {
         parameters: {
             query?: never;
@@ -521,6 +561,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Board */
+        get: operations["board_api_v1_staff_orders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Order Card */
+        get: operations["order_card_api_v1_staff_orders__order_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/orders/{order_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Act
+         * @description Raises 409 order_conflict when someone else changed the order first.
+         */
+        post: operations["act_api_v1_staff_orders__order_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/orders/{order_id}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Paid
+         * @description «Оплачено наличными / картой» (FR-14).
+         */
+        post: operations["mark_paid_api_v1_staff_orders__order_id__payment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/stop-list": {
         parameters: {
             query?: never;
@@ -543,6 +657,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionIn */
+        ActionIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "accept" | "start_cooking" | "mark_ready" | "hand_over" | "dispatch" | "deliver" | "cancel";
+            /** Expected Version */
+            expected_version: number;
+            /** Note */
+            note?: string | null;
+            /** Paid With */
+            paid_with?: ("cash" | "card") | null;
+            /** Ready At */
+            ready_at?: string | null;
+        };
         /** AddIn */
         AddIn: {
             /**
@@ -559,6 +689,15 @@ export interface components {
              * Format: uuid
              */
             size_id: string;
+        };
+        /** BoardOut */
+        BoardOut: {
+            /** Orders */
+            orders: components["schemas"]["StaffOrderOut"][];
+            /** Prep Minutes */
+            prep_minutes: number;
+            /** Timezone */
+            timezone: string;
         };
         /** Body_add_photo_api_v1_staff_location_photos_post */
         Body_add_photo_api_v1_staff_location_photos_post: {
@@ -866,6 +1005,26 @@ export interface components {
             social_links: components["schemas"]["SocialLinkOut"][];
             status: components["schemas"]["OpeningStatusOut"];
         };
+        /** LogEntryOut */
+        LogEntryOut: {
+            /** Action */
+            action: string;
+            /** Actor Kind */
+            actor_kind: string;
+            /** Actor Name */
+            actor_name: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** From Status */
+            from_status: string | null;
+            /** Note */
+            note: string | null;
+            /** To Status */
+            to_status: string;
+        };
         /** Me */
         Me: {
             /** First Name */
@@ -1072,13 +1231,17 @@ export interface components {
              * @description «#047»
              */
             number: string;
+            /** Pay Until */
+            pay_until?: string | null;
+            /** Payment Id */
+            payment_id: string | null;
             /** Payment Method */
             payment_method: string;
             /**
              * Payment Status
-             * @description unpaid, paid or refunded
+             * @enum {string}
              */
-            payment_status: string;
+            payment_status: "unpaid" | "pending" | "failed" | "paid" | "refunded";
             /** Ready At */
             ready_at: string | null;
             /** Status */
@@ -1087,6 +1250,14 @@ export interface components {
             total: number;
             /** Version */
             version: number;
+        };
+        /** PaymentIn */
+        PaymentIn: {
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "cash" | "card";
         };
         /** PhotoOut */
         PhotoOut: {
@@ -1292,6 +1463,51 @@ export interface components {
             /** Username */
             username: string | null;
         };
+        /** StaffOrderOut */
+        StaffOrderOut: {
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /** Comment */
+            comment: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Customer Name */
+            customer_name: string;
+            /** Customer Phone */
+            customer_phone: string;
+            /** Fulfilment */
+            fulfilment: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: components["schemas"]["OrderLineOut"][];
+            /** Log */
+            log?: components["schemas"]["LogEntryOut"][];
+            /** Number */
+            number: string;
+            /** Paid With */
+            paid_with: string | null;
+            /** Payment Method */
+            payment_method: string;
+            /** Payment Status */
+            payment_status: string;
+            /** Phone Verified */
+            phone_verified: boolean;
+            /** Ready At */
+            ready_at: string | null;
+            /** Status */
+            status: string;
+            /** Total */
+            total: number;
+            /** Version */
+            version: number;
+        };
         /** StaffSizeOut */
         StaffSizeOut: {
             /**
@@ -1364,6 +1580,11 @@ export interface components {
             dishes: components["schemas"]["StopDishOut"][];
             /** Groups */
             groups: components["schemas"]["StopGroupOut"][];
+        };
+        /** TestPaymentIn */
+        TestPaymentIn: {
+            /** Succeeded */
+            succeeded: boolean;
         };
     };
     responses: never;
@@ -1912,6 +2133,94 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retry_payment_api_v1_orders__order_id__payments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    test_payment_result_api_v1_payments__payment_id__test_result_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestPaymentIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2910,6 +3219,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    board_api_v1_staff_orders_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoardOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    order_card_api_v1_staff_orders__order_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    act_api_v1_staff_orders__order_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mark_paid_api_v1_staff_orders__order_id__payment_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOrderOut"];
                 };
             };
             /** @description Client error */

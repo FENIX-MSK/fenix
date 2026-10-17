@@ -7,9 +7,9 @@ export const STATUS_LABELS: Record<string, string> = {
   new: 'Отправлен в кафе',
   accepted: 'Принят',
   cooking: 'Готовится',
-  ready: 'Готов — можно забирать',
+  ready: 'Готов — ждём вас у кассы',
   handed_over: 'Выдан',
-  delivering: 'В пути',
+  delivering: 'Уже едет к вам',
   delivered: 'Доставлен',
   cancelled: 'Отменён',
 }

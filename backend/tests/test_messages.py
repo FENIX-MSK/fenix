@@ -38,17 +38,15 @@ def test_unpaid_online_order_says_nothing_yet() -> None:
 
 
 def test_accepted_shows_local_ready_time() -> None:
-    assert (
-        guest_message("accepted", payload())
-        == "Кафе приняло заказ <b>#007</b>. Будет готов к 14:35."
-    )
+    accepted = "Заказ <b>#007</b> принят. Будет готов к 14:35."
+    assert guest_message("accepted", payload()) == accepted
+    early = payload(ready_at="2026-10-17T06:20:00+00:00")
+    assert guest_message("accepted", early) == "Заказ <b>#007</b> принят. Будет готов к 9:20."
 
 
 def test_cancel_never_shows_the_reason() -> None:
     text = guest_message("cancelled", payload(refunded=True))
-    assert text == (
-        "Заказ <b>#007</b> отменён. Деньги вернутся тем же способом, которым вы платили."
-    )
+    assert text == "К сожалению, заказ <b>#007</b> отменён. Деньги за онлайн-оплату вернутся."
 
 
 def test_quiet_events() -> None:

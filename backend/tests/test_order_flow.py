@@ -133,6 +133,8 @@ async def test_online_payment_moves_the_order_to_the_kitchen_once(
     order = order_with(client, auth_headers, "online")
     assert order["status"] == "pending_payment"
     assert order["payment_status"] == "pending"
+    created = datetime.fromisoformat(order["created_at"])
+    assert datetime.fromisoformat(order["pay_until"]) - created == timedelta(minutes=15)
     payment_id = order["payment_id"]
     await worker.run()
     assert worker.gateway.sent == []  # nothing to say until it is paid
@@ -267,7 +269,7 @@ async def test_staff_handles_the_order_through_the_board(
     await worker.run()
     texts = [s.text for s in worker.gateway.sent if s.chat_id == "42"]
     assert any("Будет готов к" in t for t in texts)
-    assert any("готов — можно забирать" in t for t in texts)
+    assert any("готов — ждём вас у кассы" in t for t in texts)
 
 
 async def test_custom_ready_time_and_paid_before_hand_over(
@@ -310,7 +312,7 @@ async def test_cancel_needs_a_reason_and_hides_it_from_the_guest(
     assert "cancel_reason" not in guest_view
     await worker.run()
     last = [s.text for s in worker.gateway.sent if s.chat_id == "42"][-1]
-    assert last.endswith("отменён.")
+    assert last == f"К сожалению, заказ <b>{order['number']}</b> отменён."
     assert "молока" not in last
 
 
@@ -334,7 +336,7 @@ async def test_cancelled_online_order_is_refunded(
     refunded = client.get(f"/api/v1/orders/{order['id']}", headers=auth_headers).json()
     assert refunded["payment_status"] == "refunded"
     last = [s.text for s in worker.gateway.sent if s.chat_id == "42"][-1]
-    assert "Деньги вернутся" in last and "кофе" not in last
+    assert "вернутся" in last and "кофе" not in last
     async with worker.factory() as session:
         statuses = (await session.execute(select(Payment.status))).scalars().all()
     assert statuses == ["refunded"]
