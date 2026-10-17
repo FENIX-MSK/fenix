@@ -28,21 +28,22 @@ class MessengerUser:
     start_param: str | None
 
 
-def verify_telegram_init_data(
-    init_data: str,
+def verify_signed_query(
+    raw: str,
     bot_token: str,
     *,
     now: datetime | None = None,
     max_age: timedelta = MAX_AGE,
-) -> MessengerUser:
+) -> dict[str, str]:
+    """Check a query string signed by Telegram the way it signs launch data
+    (`initData`, shared contacts) and return its fields."""
     try:
-        pairs = parse_qsl(init_data, keep_blank_values=True, strict_parsing=True)
+        pairs = parse_qsl(raw, keep_blank_values=True, strict_parsing=True)
     except ValueError as exc:
         raise InvalidInitDataError("not a query string") from exc
     fields = dict(pairs)
     if len(fields) != len(pairs):
         raise InvalidInitDataError("duplicate keys")
-
     received_hash = fields.pop("hash", None)
     if not received_hash:
         raise InvalidInitDataError("missing hash")
@@ -51,7 +52,6 @@ def verify_telegram_init_data(
     expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected_hash, received_hash):
         raise InvalidInitDataError("bad signature")
-
     try:
         auth_date = datetime.fromtimestamp(int(fields["auth_date"]), UTC)
     except (KeyError, ValueError, OverflowError, OSError) as exc:
@@ -59,6 +59,36 @@ def verify_telegram_init_data(
     now = now or datetime.now(UTC)
     if auth_date > now + FUTURE_SKEW or now - auth_date > max_age:
         raise InvalidInitDataError("expired")
+    return fields
+
+
+@dataclass(frozen=True, slots=True)
+class SharedContact:
+    external_id: str
+    phone: str
+
+
+def verify_shared_contact(raw: str, bot_token: str) -> SharedContact:
+    """The response of Telegram's `requestContact`, signed like launch data."""
+    fields = verify_signed_query(raw, bot_token)
+    try:
+        contact = json.loads(fields["contact"])
+        user_id, phone = contact["user_id"], contact["phone_number"]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise InvalidInitDataError("bad contact") from exc
+    if type(user_id) is not int or not isinstance(phone, str):
+        raise InvalidInitDataError("bad contact")
+    return SharedContact(external_id=str(user_id), phone=phone)
+
+
+def verify_telegram_init_data(
+    init_data: str,
+    bot_token: str,
+    *,
+    now: datetime | None = None,
+    max_age: timedelta = MAX_AGE,
+) -> MessengerUser:
+    fields = verify_signed_query(init_data, bot_token, now=now, max_age=max_age)
 
     try:
         user = json.loads(fields["user"])

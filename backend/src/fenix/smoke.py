@@ -17,11 +17,16 @@ import urllib.error
 import urllib.request
 import uuid
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 
+from websockets.asyncio.client import connect
+
 from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
+from fenix.modules.ordering import api as ordering
+from fenix.modules.payments import api as payments
 from fenix.platform.config import get_settings
 from fenix.platform.db import create_engine, create_session_factory
 from fenix.platform.storage import S3Storage
@@ -170,6 +175,67 @@ async def check_media(client: Client) -> None:
         await storage.delete(key)
 
 
+# The board and order screens must hear about a change within this (NFR-4).
+SIGNAL_SECONDS = 5.0
+
+
+async def check_order(client: Client) -> None:
+    """Order -> outbox -> worker -> Redis -> WebSocket through Caddy (stories 3.3-3.10).
+
+    An online order that is never paid: the staff chat hears nothing, and the order is
+    cancelled by the system the way an unpaid one would be.
+    """
+    if not client.get("/api/v1/checkout")["is_open"]:
+        print("     order: the cafe is closed now, checked only up to checkout", flush=True)
+        return
+    client.post(
+        "/api/v1/me/contact", {"phone": "+70000000001", "first_name": "Smoke", "consent": True}
+    )
+    menu = client.get("/api/v1/menu")
+    dish_ref = next(d for c in menu["categories"] for d in c["dishes"] if not d["sold_out"])
+    dish = client.get(f"/api/v1/menu/dishes/{dish_ref['id']}")
+    size = next(s for s in dish["sizes"] if s["available"])
+    client.post(
+        "/api/v1/cart/items",
+        {"dish_id": dish["id"], "size_id": size["id"], "modifier_ids": [], "quantity": 1},
+    )
+    order = client.post("/api/v1/orders", {"payment_method": "online", "comment": "smoke"})
+    expect(order["status"] == "pending_payment" and order["payment_id"], "no online payment")
+
+    ws_url = client.base_url.replace("https://", "wss://").replace("http://", "ws://")
+    async with connect(f"{ws_url}/api/v1/ws", open_timeout=TIMEOUT) as socket:
+        hello = {"auth": client.authorization, "channel": f"order:{order['id']}"}
+        await socket.send(json.dumps(hello))
+        subscribed = json.loads(await asyncio.wait_for(socket.recv(), TIMEOUT))
+        expect(subscribed == {"event": "subscribed"}, "websocket did not subscribe")
+
+        declined = await asyncio.to_thread(
+            client.post, f"/api/v1/payments/{order['payment_id']}/test-result", {"succeeded": False}
+        )
+        expect(declined["payment_status"] == "failed", "declined payment not recorded")
+
+        engine = create_engine(get_settings().database_url)
+        try:
+            async with create_session_factory(engine)() as session, session.begin():
+                await payments.cancel_pending(session, uuid.UUID(order["id"]))
+                cancelled = await ordering.cancel_unpaid(
+                    session, uuid.UUID(order["id"]), datetime.now(UTC)
+                )
+            expect(cancelled, "smoke order could not be cancelled")
+        finally:
+            await engine.dispose()
+
+        deadline = time.monotonic() + SIGNAL_SECONDS
+        while True:
+            left = deadline - time.monotonic()
+            expect(left > 0, f"no cancel signal within {SIGNAL_SECONDS:.0f} s (worker down?)")
+            signal = json.loads(await asyncio.wait_for(socket.recv(), left))
+            if signal.get("event") == "ordering.order.cancelled":
+                break
+    final = await asyncio.to_thread(client.get, f"/api/v1/orders/{order['id']}")
+    expect(final["status"] == "cancelled", "order is not cancelled")
+
+
 async def as_staff(check: Callable[[Client], None], client: Client) -> None:
     """Run a staff check with a temporary membership that is always removed."""
     engine = create_engine(get_settings().database_url)
@@ -200,6 +266,7 @@ def run(base_url: str) -> bool:
         *CHECKS,
         ("staff-section", lambda c: asyncio.run(as_staff(check_staff_section, c))),
         ("media", lambda c: asyncio.run(check_media(c))),
+        ("order-realtime", lambda c: asyncio.run(check_order(c))),
     ]
     for name, check in checks:
         try:

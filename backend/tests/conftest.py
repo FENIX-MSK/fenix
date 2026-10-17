@@ -1,5 +1,8 @@
 import asyncio
+import importlib
+import importlib.util
 import os
+import pkgutil
 import subprocess
 import sys
 from collections.abc import AsyncIterator, Iterator
@@ -23,11 +26,14 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 BACKEND = Path(__file__).resolve().parent.parent
 
-# Register every module's tables in Base.metadata.
-import fenix.modules.catalog.models  # noqa: E402
-import fenix.modules.identity.models  # noqa: E402
-import fenix.modules.locations.models  # noqa: E402, F401
+import fenix.modules  # noqa: E402
 from fenix.platform.db import Base, create_engine, create_session_factory  # noqa: E402
+
+# Register every module's tables in Base.metadata (same discovery as migrations/env.py).
+for _module in pkgutil.iter_modules(fenix.modules.__path__):
+    if importlib.util.find_spec(f"fenix.modules.{_module.name}.models"):
+        importlib.import_module(f"fenix.modules.{_module.name}.models")
+importlib.import_module("fenix.platform.outbox")
 
 
 async def _create_database_if_missing(url: str) -> None:
@@ -121,3 +127,43 @@ async def staff_headers(seeded: async_sessionmaker[AsyncSession]) -> dict[str, s
         await identity.bootstrap_first_staff(session, user.id, location_id)
     init_data = sign_init_data({"id": STAFF_TELEGRAM_ID, "first_name": "Света"})
     return {"Authorization": f"tma {init_data}"}
+
+
+ALWAYS_OPEN = [{"weekday": d, "opens_at": "0:00", "closes_at": "0:00"} for d in range(7)]
+
+
+async def make_open_always(factory: async_sessionmaker[AsyncSession]) -> None:
+    from datetime import time
+
+    from sqlalchemy import select as _select
+
+    from fenix.modules.locations.models import Location, OpeningHours
+
+    async with factory() as session, session.begin():
+        location = (await session.execute(_select(Location))).scalar_one()
+        # Update rows in place: replacing them would insert before deleting and clash
+        # with the unique (location, weekday).
+        existing = {row.weekday: row for row in location.opening_hours}
+        for weekday in range(7):
+            row = existing.get(weekday) or OpeningHours(weekday=weekday)
+            row.opens_at = row.closes_at = time(0)
+            if weekday not in existing:
+                location.opening_hours.append(row)
+
+
+@pytest.fixture
+async def ready_guest(seeded: async_sessionmaker[AsyncSession]) -> async_sessionmaker[AsyncSession]:
+    """An always-open cafe and a guest (id 42) with a phone and consent."""
+    from datetime import UTC, datetime
+
+    from fenix.modules.identity import api as identity
+
+    await make_open_always(seeded)
+    async with seeded() as session, session.begin():
+        user = await identity.ensure_user(
+            session, platform=identity.Platform.TELEGRAM, external_id="42", first_name="Аня"
+        )
+        await identity.update_contact(
+            session, user.id, phone="+79991234567", consent=True, now=datetime.now(UTC)
+        )
+    return seeded

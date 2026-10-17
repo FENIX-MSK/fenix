@@ -28,12 +28,14 @@ __all__ = [
     "LocationInput",
     "OpeningInterval",
     "OpeningStatus",
+    "OrderSettings",
     "SocialLink",
     "SocialLinkInput",
     "add_photo",
     "format_time",
     "get_default_location",
     "get_default_location_id",
+    "get_order_settings",
     "prepare_photo",
     "remove_photo",
     "seed_defaults",
@@ -133,3 +135,29 @@ async def add_photo(session: AsyncSession, location_id: uuid.UUID, key: str) -> 
 
 async def remove_photo(session: AsyncSession, location_id: uuid.UUID, key: str) -> list[str]:
     return await editor.remove_photo(session, location_id, key)
+
+
+@dataclass(frozen=True, slots=True)
+class OrderSettings:
+    timezone: str
+    prep_minutes: int
+    unpaid_timeout_minutes: int
+    status: OpeningStatus
+
+
+async def get_order_settings(
+    session: AsyncSession, location_id: uuid.UUID, now: datetime
+) -> OrderSettings:
+    location = await service.get_default_location(session)
+    if location is None or location.id != location_id:
+        # One location for now; the explicit id keeps callers honest for later.
+        raise LookupError(location_id)
+    intervals = [
+        hours.Interval(row.weekday, row.opens_at, row.closes_at) for row in location.opening_hours
+    ]
+    return OrderSettings(
+        timezone=location.timezone,
+        prep_minutes=location.prep_minutes,
+        unpaid_timeout_minutes=location.unpaid_timeout_minutes,
+        status=hours.opening_status(intervals, location.timezone, now),
+    )

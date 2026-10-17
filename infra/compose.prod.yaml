@@ -49,8 +49,11 @@ services:
 
   worker:
     <<: *backend
-    command: ["taskiq", "worker", "fenix.worker:broker"]
-    depends_on: [redis, postgres]
+    command: ["fenix-worker"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+      tg-egress: { condition: service_healthy }
 
   bot:
     <<: *backend

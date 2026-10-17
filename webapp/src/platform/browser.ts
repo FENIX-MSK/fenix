@@ -4,6 +4,8 @@ import type { Platform } from './types'
 export const browserPlatform: Platform = {
   name: 'browser',
   hasNativeBackButton: false,
+  hasNativeMainButton: false,
+  showMainButton: () => () => {},
   init() {},
   getUser: () => null,
   getInitDataRaw: () => null,
@@ -12,6 +14,7 @@ export const browserPlatform: Platform = {
   // The browser's own back is the fallback; screens also offer an in-page back link.
   showBackButton: () => () => {},
   haptic() {},
+  requestContact: async () => null,
   openTelegramLink(url) {
     window.open(url, '_blank', 'noopener')
   },

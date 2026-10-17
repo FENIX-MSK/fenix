@@ -5,10 +5,12 @@ from typing import Annotated
 
 import structlog
 from fastapi import Depends, Header
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fenix.http.deps import SessionDep, SettingsDep
 from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
+from fenix.platform.config import Settings
 from fenix.platform.errors import ApiError
 from fenix.platform.messenger_auth import InvalidInitDataError, verify_telegram_init_data
 
@@ -28,10 +30,16 @@ async def current_user(
 ) -> identity.User:
     if not authorization or not authorization.startswith(SCHEME):
         raise _unauthorized()
+    user = await authenticate(session, settings, authorization.removeprefix(SCHEME))
+    structlog.contextvars.bind_contextvars(user_id=str(user.id))
+    return user
+
+
+async def authenticate(session: AsyncSession, settings: Settings, init_data: str) -> identity.User:
+    """The user behind signed launch data (AD-7); raises 401 otherwise."""
     try:
         launch = verify_telegram_init_data(
-            authorization.removeprefix(SCHEME),
-            settings.telegram_bot_token.get_secret_value(),
+            init_data, settings.telegram_bot_token.get_secret_value()
         )
     except InvalidInitDataError as exc:
         # The reason only; the launch data itself carries personal data.
@@ -47,7 +55,6 @@ async def current_user(
         username=launch.username,
         source=launch.start_param,
     )
-    structlog.contextvars.bind_contextvars(user_id=str(user.id))
     return user
 
 
