@@ -86,7 +86,12 @@ export function CartScreen({ onBack, onCheckout, skipped = [] }: Props) {
                           +
                         </button>
                       </div>
-                      <span className="dish-price">{formatPrice(line.total_price ?? 0)}</span>
+                      <span className="dish-price">
+                        {line.original_total_price != null && line.original_total_price > (line.total_price ?? 0) && (
+                          <s className="old-price">{formatPrice(line.original_total_price)}</s>
+                        )}
+                        {formatPrice(line.total_price ?? 0)}
+                      </span>
                     </div>
                   ) : (
                     <div className="cart-line-footer">
@@ -106,7 +111,10 @@ export function CartScreen({ onBack, onCheckout, skipped = [] }: Props) {
           {error && <p className="error-text">{error}</p>}
           <div className="cart-total">
             <span>Итого</span>
-            <span aria-live="polite">{formatPrice(cart.total)}</span>
+            <span aria-live="polite">
+              {cart.original_total > cart.total && <s className="old-price">{formatPrice(cart.original_total)}</s>}
+              {formatPrice(cart.total)}
+            </span>
           </div>
           {onCheckout && (
             <MainAction text={`Оформить · ${formatPrice(cart.total)}`} disabled={unavailable.length > 0 || cart.count === 0} onClick={onCheckout} />

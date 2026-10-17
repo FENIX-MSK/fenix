@@ -28,6 +28,8 @@ export interface PlaceOrder {
   changeFrom: number | null
   /** A slot from the checkout, or null for «как можно скорее». */
   scheduledFor: string | null
+  /** A «checked» promotion the guest claims (birthday). */
+  claimedPromotionId: string | null
 }
 
 const slotTime = new Intl.DateTimeFormat('ru-RU', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Moscow' })
@@ -85,6 +87,8 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
   const [address, setAddress] = useState<Address>({ house: '', apartment: '', entrance: '', floor: '', comment: '' })
   const [changeFrom, setChangeFrom] = useState('')
   const [slot, setSlot] = useState<string>('')
+  const [claim, setClaim] = useState<string | null>(null)
+  const claimed = checkout.checked_promotions.find((p) => p.id === claim) ?? null
 
   if (checkout.orders_paused) {
     return (
@@ -120,7 +124,7 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
   }
 
   const delivery = fulfilment === 'delivery'
-  const total = (cart?.total ?? 0) + (delivery ? checkout.delivery_fee : 0)
+  const total = (claimed ? claimed.preview_total : (cart?.total ?? 0)) + (delivery ? checkout.delivery_fee : 0)
   const addressReady = !delivery || (address.house.trim() !== '' && address.apartment.trim() !== '')
   const ready =
     Boolean(phone || typedPhone.trim()) && consent && name.trim() && cart && cart.count > 0 && addressReady
@@ -143,6 +147,7 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
         address: delivery ? address : null,
         changeFrom: delivery && payment === 'cash' && changeFrom ? Math.round(Number(changeFrom) * 100) : null,
         scheduledFor: slot || null,
+        claimedPromotionId: claim,
       })
     setBusy(false)
     if (failure) setError(failure)
@@ -242,9 +247,31 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
         {!consent && <p className="caption muted">Без согласия мы не можем принять заказ.</p>}
       </section>
 
+      {checkout.checked_promotions.map((promotion) => (
+        <label key={promotion.id} className="toggle card">
+          <input
+            type="checkbox"
+            checked={claim === promotion.id}
+            onChange={(e) => {
+              setClaim(e.target.checked ? promotion.id : null)
+              if (e.target.checked && payment === 'online') setPayment('cash')
+            }}
+          />
+          <span>
+            {promotion.title}
+            {claim === promotion.id && (
+              <span className="caption muted">
+                {' '}
+                · скидку подтвердим при выдаче, оплата на месте. Предварительно ≈ {formatPrice(total)}
+              </span>
+            )}
+          </span>
+        </label>
+      ))}
+
       <section className="card">
         <h2 className="section">Оплата</h2>
-        {checkout.payment_methods.map((method) => (
+        {checkout.payment_methods.filter((method) => !(claim && method === 'online')).map((method) => (
           <label key={method} className="option">
             <input type="radio" name="payment" checked={payment === method} onChange={() => setPayment(method)} />
             <span className="option-name">{PAYMENT_LABELS[method]}</span>
@@ -279,7 +306,7 @@ function CheckoutForm({ checkout, onPlace }: { checkout: Checkout; onPlace?: Pro
 
       {error && <p className="error-text">{error}</p>}
       <MainAction
-        text={`${payment === 'online' ? 'Оплатить' : 'Оформить'} · ${formatPrice(total)}`}
+        text={`${payment === 'online' ? 'Оплатить' : 'Оформить'} · ${claim ? '≈ ' : ''}${formatPrice(total)}`}
         disabled={!ready || !onPlace}
         loading={busy}
         onClick={place}

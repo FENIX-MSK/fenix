@@ -12,12 +12,13 @@ interface Props {
   onClose: () => void
   onAct: Act
   onMarkPaid: (order: StaffOrder, method: 'cash' | 'card') => Promise<boolean>
+  onDiscount?: (order: StaffOrder, confirm: boolean) => Promise<boolean>
 }
 
 const CANCELLABLE = new Set(['new', 'accepted', 'cooking', 'ready', 'delivering', 'scheduled'])
 
 /** Everything about one order, with the secondary actions behind it (FR-22, FR-25). */
-export function OrderSheet({ order, onClose, onAct, onMarkPaid }: Props) {
+export function OrderSheet({ order, onClose, onAct, onMarkPaid, onDiscount }: Props) {
   const [cancelling, setCancelling] = useState(false)
   const badge = paymentBadge(order)
   const onSite = order.payment_method !== 'online'
@@ -65,6 +66,28 @@ export function OrderSheet({ order, onClose, onAct, onMarkPaid }: Props) {
       </p>
       {order.cancel_reason && <p className="error-text">Причина отмены: {order.cancel_reason}</p>}
 
+      {order.discount_title && (
+        <div className="sheet-section">
+          <p>
+            🎂 {order.discount_title}:{' '}
+            {order.discount_status === 'pending'
+              ? `проверить документ (без скидки ${formatPrice(order.total_without_claim ?? order.total)})`
+              : order.discount_status === 'confirmed'
+                ? 'подтверждена'
+                : 'снята'}
+          </p>
+          {order.discount_status === 'pending' && onDiscount && (
+            <div className="button-row">
+              <button type="button" className="primary-button" onClick={() => void onDiscount(order, true)}>
+                Подтвердить скидку
+              </button>
+              <button type="button" className="secondary-button" onClick={() => void onDiscount(order, false)}>
+                Снять скидку
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {canMarkPaid && (
         <div className="button-row sheet-section">
           <button type="button" className="secondary-button" onClick={() => onMarkPaid(order, 'cash')}>

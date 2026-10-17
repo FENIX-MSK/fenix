@@ -82,11 +82,11 @@ development_status:
   5-7-загруженность-кухни-и-время-ожидания: review
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-управление-акциями: backlog
-  6-2-акционные-цены-в-меню-и-корзине: backlog
-  6-3-скидка-с-проверкой-при-оформлении: backlog
-  6-4-подтверждение-скидки-при-выдаче: backlog
+  epic-6: in-progress
+  6-1-управление-акциями: review
+  6-2-акционные-цены-в-меню-и-корзине: review
+  6-3-скидка-с-проверкой-при-оформлении: review
+  6-4-подтверждение-скидки-при-выдаче: review
   epic-6-retrospective: optional
 
   epic-7: backlog

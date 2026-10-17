@@ -62,6 +62,10 @@ export function orderErrorText(code: string | undefined, details?: Record<string
       return 'Доставка сейчас недоступна — можно забрать самому.'
     case 'address_required':
       return 'Укажите дом и квартиру.'
+    case 'claim_requires_on_site':
+      return 'Со скидкой «с проверкой» оплата только на месте.'
+    case 'promotion_unavailable':
+      return 'Эта скидка сейчас не действует.'
     case 'bad_change':
       return 'Сдача должна быть не меньше суммы заказа.'
     case 'location_closed':

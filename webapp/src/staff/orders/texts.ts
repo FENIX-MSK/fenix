@@ -62,6 +62,8 @@ export const ACTION_LABELS: Record<string, string> = {
   dispatch: 'Передан курьеру',
   deliver: 'Доставлен',
   cancel: 'Отменён',
+  confirm_discount: 'Скидка подтверждена',
+  reject_discount: 'Скидка снята',
 }
 
 export const CANCEL_REASONS = ['Нет продуктов', 'Не успеваем', 'Гость попросил']

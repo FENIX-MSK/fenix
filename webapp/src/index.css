@@ -1581,3 +1581,29 @@ a {
     overflow-x: auto;
   }
 }
+
+.old-price {
+  margin-right: var(--space-1);
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.promo-banners {
+  margin: var(--space-2) var(--gutter) 0;
+}
+
+.promo-banner {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border-left: 3px solid var(--gold);
+}
+
+.board-claim {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm, 6px);
+  border: 1px dashed var(--gold);
+  font-weight: 600;
+}

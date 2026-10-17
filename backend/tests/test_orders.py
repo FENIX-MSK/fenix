@@ -65,6 +65,8 @@ def test_cash_order(client: TestClient, auth_headers: dict[str, str]) -> None:
             "quantity": 2,
             "unit_price": 69900,
             "total_price": 139800,
+            "original_unit_price": 69900,
+            "promotion_title": None,
         }
     ]
     assert client.get("/api/v1/cart", headers=auth_headers).json()["lines"] == []

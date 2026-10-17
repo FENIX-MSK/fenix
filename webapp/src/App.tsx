@@ -68,6 +68,7 @@ export default function App() {
             address: place.address,
             change_from: place.changeFrom,
             scheduled_for: place.scheduledFor,
+            claimed_promotion_id: place.claimedPromotionId,
           },
         })
         if (!data) {

@@ -188,6 +188,16 @@ export function OrderDetails({ order }: { order: Order }) {
         {order.delivery_fee > 0 && <p className="muted">Доставка {formatPrice(order.delivery_fee)}</p>}
         {order.change_from && <p className="muted">Сдача с {formatPrice(order.change_from)}</p>}
         <p>{paymentText(order)}</p>
+        {order.discount_title && (
+          <p className="muted">
+            {order.discount_title}:{' '}
+            {order.discount_status === 'confirmed'
+              ? 'подтверждена'
+              : order.discount_status === 'rejected'
+                ? 'не подтверждена'
+                : 'подтвердим при выдаче'}
+          </p>
+        )}
         {order.comment && <p className="muted">«{order.comment}»</p>}
       </section>
     </>

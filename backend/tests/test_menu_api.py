@@ -93,6 +93,8 @@ def test_single_size_dish(client: TestClient, auth_headers: dict[str, str]) -> N
         "has_sizes": False,
         "sold_out": False,
         "photo_url": None,
+        "original_price_from": 69900,
+        "discount_percent": 0,
     }
 
 

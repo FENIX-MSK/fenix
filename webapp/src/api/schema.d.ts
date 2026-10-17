@@ -718,6 +718,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/staff/orders/{order_id}/discount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Discount
+         * @description Confirm the claimed discount after checking the document, or remove it (FR-23).
+         */
+        post: operations["decide_discount_api_v1_staff_orders__order_id__discount_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/staff/orders/{order_id}/payment": {
         parameters: {
             query?: never;
@@ -733,6 +753,42 @@ export interface paths {
          */
         post: operations["mark_paid_api_v1_staff_orders__order_id__payment_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Promotions */
+        get: operations["list_promotions_api_v1_staff_promotions_get"];
+        put?: never;
+        /** Create Promotion */
+        post: operations["create_promotion_api_v1_staff_promotions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/promotions/{promotion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Promotion */
+        put: operations["update_promotion_api_v1_staff_promotions__promotion_id__put"];
+        post?: never;
+        /** Delete Promotion */
+        delete: operations["delete_promotion_api_v1_staff_promotions__promotion_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -854,10 +910,17 @@ export interface components {
             id: string;
             /** Modifier Names */
             modifier_names: string[];
+            /**
+             * Original Total Price
+             * @description Before the promotion
+             */
+            original_total_price: number | null;
             /** Photo Url */
             photo_url: string | null;
             /** Problem */
             problem: string | null;
+            /** Promotion Title */
+            promotion_title: string | null;
             /** Quantity */
             quantity: number;
             /** Title */
@@ -876,6 +939,8 @@ export interface components {
             count: number;
             /** Lines */
             lines: components["schemas"]["CartLineOut"][];
+            /** Original Total */
+            original_total: number;
             /**
              * Total
              * @description Kopecks of the lines that can be ordered
@@ -897,6 +962,20 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** CheckedPromotionOut */
+        CheckedPromotionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Percent */
+            percent: number;
+            /** Preview Total */
+            preview_total: number;
+            /** Title */
+            title: string;
+        };
         /** CheckoutOut */
         CheckoutOut: {
             /**
@@ -904,6 +983,8 @@ export interface components {
              * @description «Как можно скорее (≈N мин)»: preparation + load
              */
             asap_minutes: number;
+            /** Checked Promotions */
+            checked_promotions: components["schemas"]["CheckedPromotionOut"][];
             contact: components["schemas"]["ContactOut"];
             /** Delivery Fee */
             delivery_fee: number;
@@ -954,6 +1035,13 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /** DiscountIn */
+        DiscountIn: {
+            /** Confirm */
+            confirm: boolean;
+            /** Expected Version */
+            expected_version: number;
         };
         /** DishIn */
         DishIn: {
@@ -1226,6 +1314,8 @@ export interface components {
         MenuDishOut: {
             /** Description */
             description: string;
+            /** Discount Percent */
+            discount_percent: number;
             /**
              * Has Sizes
              * @description Several sizes: show the price as «от N ₽»
@@ -1238,6 +1328,11 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /**
+             * Original Price From
+             * @description Before the promotion; struck through if higher
+             */
+            original_price_from: number;
             /** Photo Url */
             photo_url: string | null;
             /**
@@ -1257,6 +1352,8 @@ export interface components {
         MenuOut: {
             /** Categories */
             categories: components["schemas"]["MenuCategoryOut"][];
+            /** Promotions */
+            promotions: components["schemas"]["PromotionBannerOut"][];
         };
         /** MissingGroupOut */
         MissingGroupOut: {
@@ -1367,6 +1464,10 @@ export interface components {
         OrderLineOut: {
             /** Modifier Names */
             modifier_names: string[];
+            /** Original Unit Price */
+            original_unit_price: number;
+            /** Promotion Title */
+            promotion_title: string | null;
             /** Quantity */
             quantity: number;
             /** Title */
@@ -1393,6 +1494,10 @@ export interface components {
              * @default 0
              */
             delivery_fee: number;
+            /** Discount Status */
+            discount_status?: string | null;
+            /** Discount Title */
+            discount_title?: string | null;
             /** Fulfilment */
             fulfilment: string;
             /**
@@ -1493,6 +1598,8 @@ export interface components {
             address?: components["schemas"]["AddressOut"] | null;
             /** Change From */
             change_from?: number | null;
+            /** Claimed Promotion Id */
+            claimed_promotion_id?: string | null;
             /**
              * Comment
              * @default
@@ -1538,6 +1645,10 @@ export interface components {
             complete: boolean;
             /** Missing Groups */
             missing_groups: components["schemas"]["MissingGroupOut"][];
+            /** Original Unit Price */
+            original_unit_price: number;
+            /** Promotion Title */
+            promotion_title: string | null;
             /**
              * Total Price
              * @description Kopecks for the whole quantity
@@ -1548,6 +1659,79 @@ export interface components {
              * @description Kopecks for one item
              */
             unit_price: number;
+        };
+        /** PromotionBannerOut */
+        PromotionBannerOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Percent */
+            percent: number;
+            /** Title */
+            title: string;
+        };
+        /** PromotionIn */
+        PromotionIn: {
+            /** Category Id */
+            category_id?: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Ends On */
+            ends_on?: string | null;
+            /**
+             * Kind
+             * @default auto
+             * @enum {string}
+             */
+            kind: "auto" | "checked";
+            /** Percent */
+            percent: number;
+            /** Starts On */
+            starts_on?: string | null;
+            /**
+             * Title
+             * @description Text for guests
+             */
+            title: string;
+        };
+        /** PromotionOut */
+        PromotionOut: {
+            /** Category Id */
+            category_id?: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Ends On */
+            ends_on?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @default auto
+             * @enum {string}
+             */
+            kind: "auto" | "checked";
+            /** Percent */
+            percent: number;
+            /** Starts On */
+            starts_on?: string | null;
+            /**
+             * Title
+             * @description Text for guests
+             */
+            title: string;
         };
         /** QuantityIn */
         QuantityIn: {
@@ -1596,11 +1780,13 @@ export interface components {
              * @description Empty for a dish with a single price
              */
             name: string;
+            /** Original Price */
+            original_price: number;
             /** Portion */
             portion: string | null;
             /**
              * Price
-             * @description Kopecks
+             * @description Kopecks, after the automatic promotion
              */
             price: number;
         };
@@ -1721,6 +1907,10 @@ export interface components {
             customer_phone: string;
             /** Delivery Fee */
             delivery_fee: number;
+            /** Discount Status */
+            discount_status: string | null;
+            /** Discount Title */
+            discount_title: string | null;
             /** Fulfilment */
             fulfilment: string;
             /**
@@ -1750,6 +1940,8 @@ export interface components {
             status: string;
             /** Total */
             total: number;
+            /** Total Without Claim */
+            total_without_claim: number | null;
             /** Version */
             version: number;
         };
@@ -3951,6 +4143,52 @@ export interface operations {
             };
         };
     };
+    decide_discount_api_v1_staff_orders__order_id__discount_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffOrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mark_paid_api_v1_staff_orders__order_id__payment_post: {
         parameters: {
             query?: never;
@@ -3975,6 +4213,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StaffOrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_promotions_api_v1_staff_promotions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionOut"][];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_promotion_api_v1_staff_promotions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_promotion_api_v1_staff_promotions__promotion_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                promotion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_promotion_api_v1_staff_promotions__promotion_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                promotion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Client error */

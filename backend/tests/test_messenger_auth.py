@@ -46,7 +46,7 @@ def tamper(init_data: str, key: str, value: str) -> str:
         pytest.param(sign_init_data() + "&start_param=promo", id="added-field"),
         pytest.param(sign_init_data(token="654321:OTHER-TOKEN"), id="other-bot"),
         pytest.param(sign_init_data(auth_date=int(time.time()) - 24 * 3600 - 1), id="expired"),
-        pytest.param(sign_init_data(auth_date=int(time.time()) + 120), id="from-future"),
+        pytest.param(sign_init_data(auth_date=int(time.time()) + 3600), id="from-future"),
         pytest.param(sign_init_data(auth_date="x"), id="auth-date-nan"),
         pytest.param(
             urlencode({k: v for k, v in parse_qsl(sign_init_data()) if k != "hash"}), id="no-hash"

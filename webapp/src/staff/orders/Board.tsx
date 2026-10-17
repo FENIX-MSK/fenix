@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { api } from '../../api/client'
+import { formatPrice } from '../../guest/format'
 import { useSignals } from '../../api/signals'
 import type { Board as BoardData, StaffOrder } from '../../api/types'
 import { platform } from '../../platform'
@@ -25,6 +26,7 @@ type Dialog =
   | { kind: 'accept'; order: StaffOrder }
   | { kind: 'pay'; order: StaffOrder; action: string }
   | { kind: 'kitchen' }
+  | { kind: 'discount'; order: StaffOrder }
   | null
 
 export function Board({ openOrderId }: Props) {
@@ -138,11 +140,33 @@ export function Board({ openOrderId }: Props) {
     return false
   }
 
+  const decideDiscount = async (order: StaffOrder, confirm: boolean) => {
+    try {
+      const { data, error } = await api.POST('/api/v1/staff/orders/{order_id}/discount', {
+        params: { path: { order_id: order.id } },
+        body: { confirm, expected_version: order.version },
+      })
+      if (data) {
+        replace(data)
+        return true
+      }
+      setNotice(error?.error.code === 'order_conflict' ? 'Заказ уже изменили.' : 'Не получилось.')
+      void load()
+    } catch {
+      setNotice('Не получилось связаться с сервером.')
+    }
+    return false
+  }
+
   const next = (order: StaffOrder) => {
     seen.current.add(order.id)
     if (order.status === 'new') return setDialog({ kind: 'accept', order })
     const step = nextStep(order)
     if (!step) return
+    // The claimed discount is decided before the order leaves (FR-23).
+    if (['hand_over', 'deliver'].includes(step.action) && order.discount_status === 'pending') {
+      return setDialog({ kind: 'discount', order })
+    }
     if (['hand_over', 'deliver'].includes(step.action) && order.payment_status !== 'paid') {
       return setDialog({ kind: 'pay', order, action: step.action })
     }
@@ -233,7 +257,13 @@ export function Board({ openOrderId }: Props) {
         </>
       )}
       {selectedOrder && (
-        <OrderSheet order={selectedOrder} onClose={() => setSelected(null)} onAct={act} onMarkPaid={markPaid} />
+        <OrderSheet
+          order={selectedOrder}
+          onClose={() => setSelected(null)}
+          onAct={act}
+          onMarkPaid={markPaid}
+          onDiscount={decideDiscount}
+        />
       )}
       {selected && board && !selectedOrder && (
         <ClosedOrder orderId={selected} onClose={() => setSelected(null)} />
@@ -263,6 +293,31 @@ export function Board({ openOrderId }: Props) {
             }
           }}
         />
+      )}
+      {dialog?.kind === 'discount' && (
+        <Sheet title={`Скидка ${dialog.order.number}`} onClose={() => setDialog(null)}>
+          <p>🎂 {dialog.order.discount_title}. Проверьте документ.</p>
+          <div className="button-row sheet-section">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={async () => {
+                if (await decideDiscount(dialog.order, true)) setDialog(null)
+              }}
+            >
+              Подтвердить скидку
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={async () => {
+                if (await decideDiscount(dialog.order, false)) setDialog(null)
+              }}
+            >
+              Снять — без скидки {formatPrice(dialog.order.total_without_claim ?? dialog.order.total)}
+            </button>
+          </div>
+        </Sheet>
       )}
       {dialog?.kind === 'pay' && (
         <Sheet title={`Выдать ${dialog.order.number}`} onClose={() => setDialog(null)}>

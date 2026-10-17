@@ -34,6 +34,9 @@ export function OrderCard({ order, highlighted, busy, onOpen, onNext }: Props) {
             </li>
           ))}
         </ul>
+        {order.discount_status === 'pending' && (
+          <p className="board-claim">🎂 {order.discount_title} — проверить документ</p>
+        )}
         {order.comment && <p className="board-comment">💬 {order.comment}</p>}
         {order.fulfilment === 'delivery' && (
           <p className="board-address">
