@@ -8,9 +8,11 @@ statuses: no tokens, no launch data, no personal data.
 """
 
 import asyncio
+import base64
 import hashlib
 import hmac
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -236,6 +238,37 @@ async def check_order(client: Client) -> None:
     expect(final["status"] == "cancelled", "order is not cancelled")
 
 
+def grafana(path: str) -> Any:
+    password = os.environ.get("GRAFANA_ADMIN_PASSWORD", "")
+    credentials = base64.b64encode(f"admin:{password}".encode()).decode()
+    request = urllib.request.Request(
+        f"http://grafana:3000{path}", headers={"Authorization": f"Basic {credentials}"}
+    )
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:  # noqa: S310
+        return json.loads(response.read())
+
+
+def check_monitoring(client: Client) -> None:
+    """Story 7.2 on the stand: worker and bot metrics, Grafana's dashboard and alerts."""
+    worker, _ = fetch("http://worker:9101/metrics")
+    expect(b"fenix_outbox_pending" in worker, "worker metrics are missing")
+    bot, _ = fetch("http://bot:9102/metrics")
+    expect(b"fenix_bot_up 1.0" in bot, "bot metrics are missing")
+    # Grafana was just restarted with the new provisioning: give it a minute.
+    deadline = time.monotonic() + 90
+    while True:
+        try:
+            rules = grafana("/api/v1/provisioning/alert-rules")
+            dashboard = grafana("/api/dashboards/uid/fenix-overview")
+            break
+        except urllib.error.URLError, ConnectionError, TimeoutError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(5)
+    expect(len(rules) >= 6, f"grafana has {len(rules)} alert rules")
+    expect(dashboard["dashboard"]["uid"] == "fenix-overview", "dashboard is missing")
+
+
 async def as_staff(check: Callable[[Client], None], client: Client) -> None:
     """Run a staff check with a temporary membership that is always removed."""
     engine = create_engine(get_settings().database_url)
@@ -267,6 +300,7 @@ def run(base_url: str) -> bool:
         ("staff-section", lambda c: asyncio.run(as_staff(check_staff_section, c))),
         ("media", lambda c: asyncio.run(check_media(c))),
         ("order-realtime", lambda c: asyncio.run(check_order(c))),
+        ("monitoring", check_monitoring),
     ]
     for name, check in checks:
         try:
