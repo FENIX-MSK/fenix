@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
+from redis.asyncio import Redis
 from starlette.types import Lifespan
 
-from fenix.http import health
+from fenix.http import health, ws
 from fenix.http.router import api_v1
 from fenix.platform.config import Settings, get_settings
 from fenix.platform.db import create_engine, create_session_factory
@@ -27,10 +28,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.settings = settings
         app.state.media_storage = S3Storage(settings)
         app.state.session_factory = create_session_factory(engine)
+        app.state.redis = Redis.from_url(settings.redis_url)
         log.info("app.started", environment=settings.environment)
         try:
             yield
         finally:
+            await app.state.redis.aclose()
             await engine.dispose()
 
     return build_app(lifespan=lifespan)
@@ -41,6 +44,7 @@ def build_app(lifespan: Lifespan[FastAPI] | None = None) -> FastAPI:
     app = FastAPI(title="Fenix API", lifespan=lifespan, exception_handlers=EXCEPTION_HANDLERS)
     app.include_router(health.router, prefix="/api")
     app.include_router(api_v1)
+    app.include_router(ws.router)
     Instrumentator(excluded_handlers=["/metrics", "/api/health"]).instrument(app).expose(
         app, include_in_schema=False
     )

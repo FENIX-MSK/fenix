@@ -21,6 +21,7 @@ if config.config_file_name is not None:
 for module in pkgutil.iter_modules(fenix.modules.__path__):
     if importlib.util.find_spec(f"fenix.modules.{module.name}.models"):
         importlib.import_module(f"fenix.modules.{module.name}.models")
+importlib.import_module("fenix.platform.outbox")
 
 target_metadata = Base.metadata
 

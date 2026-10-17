@@ -21,8 +21,6 @@ dependencies = [
     "redis>=8.1.0",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
-    "taskiq>=0.13.0",
-    "taskiq-redis>=1.2.4",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -32,6 +30,7 @@ fenix-openapi = "fenix.http.openapi:main"
 fenix-seed = "fenix.seed:main"
 fenix-smoke = "fenix.smoke:main"
 fenix-staff = "fenix.staff_cli:main"
+fenix-worker = "fenix.worker:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

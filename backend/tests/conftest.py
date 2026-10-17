@@ -33,6 +33,7 @@ from fenix.platform.db import Base, create_engine, create_session_factory  # noq
 for _module in pkgutil.iter_modules(fenix.modules.__path__):
     if importlib.util.find_spec(f"fenix.modules.{_module.name}.models"):
         importlib.import_module(f"fenix.modules.{_module.name}.models")
+importlib.import_module("fenix.platform.outbox")
 
 
 async def _create_database_if_missing(url: str) -> None:

@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
@@ -15,6 +17,10 @@ STAFF_GRANTED = "Готово, у вас есть доступ к разделу
 INVITATION_INVALID = "Приглашение недействительно — попросите коллегу прислать новое."
 # Guests who arrive through a staff invitation are not a marketing source.
 INVITATION_SOURCE = "staff_invite"
+# `/start order_<id>` from the «Открыть заказ» button in the staff chat (story 3.6).
+ORDER_PREFIX = "order_"
+ORDER_FOR_STAFF = "Заказ — в разделе персонала:"
+ORDER_NOT_STAFF = "Эта ссылка — для сотрудников кафе."
 
 
 def build_start_keyboard(settings: Settings) -> InlineKeyboardMarkup | None:
@@ -39,6 +45,11 @@ async def handle_start(
         return
 
     payload = command.args or ""
+    if payload.startswith(ORDER_PREFIX):
+        await open_order_for_staff(
+            message, payload.removeprefix(ORDER_PREFIX), settings, session_factory
+        )
+        return
     invitation = (
         payload.removeprefix(identity.INVITATION_PREFIX)
         if payload.startswith(identity.INVITATION_PREFIX)
@@ -66,6 +77,33 @@ async def handle_start(
             ):
                 reply = STAFF_GRANTED
     await message.answer(reply, reply_markup=build_start_keyboard(settings))
+
+
+async def open_order_for_staff(
+    message: Message,
+    order_id: str,
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Group chats cannot carry Mini App buttons, so the staff chat links here and the
+    private chat answers with one that opens the board on the order."""
+    sender = message.from_user
+    if sender is None:
+        return
+    async with session_factory() as session, session.begin():
+        user = await identity.find_user(session, identity.Platform.TELEGRAM, str(sender.id))
+        location_id = await locations.get_default_location_id(session)
+        staff = bool(
+            user and location_id and await identity.is_staff(session, user.id, location_id)
+        )
+    if not staff or not settings.webapp_url:
+        await message.answer(ORDER_NOT_STAFF, reply_markup=build_start_keyboard(settings))
+        return
+    url = f"{settings.webapp_url}?order={quote(order_id)}&staff=1"
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="Открыть заказ", web_app=WebAppInfo(url=url))]]
+    )
+    await message.answer(ORDER_FOR_STAFF, reply_markup=keyboard)
 
 
 def _is_bootstrap_user(settings: Settings, username: str | None) -> bool:

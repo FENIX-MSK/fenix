@@ -14,6 +14,7 @@ from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
 from fenix.modules.ordering import cart
 from fenix.modules.ordering.models import Order, OrderCounter, OrderEvent, OrderItem
+from fenix.platform import outbox
 
 Status = Literal[
     "pending_payment",
@@ -61,6 +62,21 @@ TRANSITIONS: dict[tuple[str, str], Rule] = {
     ("ready", "dispatch"): _rule("delivering", "staff", fulfilment="delivery"),
     ("ready", "cancel"): _rule("cancelled", "staff"),
     ("delivering", "deliver"): _rule("delivered", "staff"),
+}
+
+
+# Domain event per action: `ordering.order.<past_tense>` (AD-4).
+EVENT_NAMES: dict[str, str] = {
+    "create": "placed",
+    "payment_succeeded": "payment_confirmed",
+    "release": "released",
+    "accept": "accepted",
+    "start_cooking": "cooking_started",
+    "mark_ready": "ready",
+    "hand_over": "handed_over",
+    "dispatch": "dispatched",
+    "deliver": "delivered",
+    "cancel": "cancelled",
 }
 
 
@@ -167,6 +183,54 @@ def view(order: Order) -> OrderView:
     )
 
 
+async def emit_event(
+    session: AsyncSession,
+    order: OrderView,
+    action: str,
+    actor: ActorKind,
+    extra: dict[str, object] | None = None,
+) -> None:
+    """Everything subscribers need, so they never call back into ordering (AD-4)."""
+    user = await identity.get_user(session, order.user_id)
+    timezone = (
+        await locations.get_order_settings(session, order.location_id, order.created_at)
+    ).timezone
+    outbox.emit(
+        session,
+        f"ordering.order.{EVENT_NAMES[action]}",
+        {
+            "order_id": str(order.id),
+            "location_id": str(order.location_id),
+            "number": order.label,
+            "status": order.status,
+            "version": order.version,
+            "actor": actor,
+            "fulfilment": order.fulfilment,
+            "payment_method": order.payment_method,
+            "total": order.total,
+            "comment": order.comment,
+            "ready_at": order.ready_at.isoformat() if order.ready_at else None,
+            "timezone": timezone,
+            "lines": [
+                {
+                    "title": line.title,
+                    "modifier_names": line.modifier_names,
+                    "quantity": line.quantity,
+                    "total_price": line.total_price,
+                }
+                for line in order.lines
+            ],
+            "customer": {
+                "user_id": str(order.user_id),
+                "platform": user.platform.value if user else None,
+                "external_id": user.external_id if user else None,
+                "name": order.customer_name,
+            },
+            **(extra or {}),
+        },
+    )
+
+
 async def next_number(session: AsyncSession, location_id: uuid.UUID, business_date: date) -> int:
     """Atomic: the upsert takes the counter row's lock until the transaction ends."""
     statement = (
@@ -251,7 +315,9 @@ async def place(
     await cart.clear(session, user_id, location_id)
     await session.flush()
     await session.refresh(order, ["created_at", "items", "events"])
-    return view(order)
+    placed = view(order)
+    await emit_event(session, placed, "create", "guest")
+    return placed
 
 
 async def get(session: AsyncSession, order_id: uuid.UUID) -> Order | None:
@@ -268,6 +334,7 @@ async def transition(
     now: datetime,
     ready_at: datetime | None = None,
     note: str | None = None,
+    event_extra: dict[str, object] | None = None,
 ) -> OrderView:
     """The only way to change an order's status (AD-3).
 
@@ -319,7 +386,9 @@ async def transition(
     )
     await session.flush()
     await session.refresh(order)
-    return view(order)
+    changed_view = view(order)
+    await emit_event(session, changed_view, action, actor.kind, event_extra)
+    return changed_view
 
 
 def default_ready_at(now: datetime, prep_minutes: int) -> datetime:
@@ -335,3 +404,34 @@ async def count_in_status(
         .where(Order.location_id == location_id, Order.status.in_(statuses))
     )
     return (await session.execute(statement)).scalar_one()
+
+
+async def overdue_unpaid(session: AsyncSession, now: datetime) -> list[uuid.UUID]:
+    """Orders left in `pending_payment` past their location's timeout (FR-13)."""
+    rows = (
+        await session.execute(
+            select(Order.id, Order.location_id, Order.created_at).where(
+                Order.status == "pending_payment"
+            )
+        )
+    ).all()
+    timeouts: dict[uuid.UUID, int] = {}
+    overdue = []
+    for order_id, location_id, created_at in rows:
+        if location_id not in timeouts:
+            settings = await locations.get_order_settings(session, location_id, now)
+            timeouts[location_id] = settings.unpaid_timeout_minutes
+        if created_at + timedelta(minutes=timeouts[location_id]) <= now:
+            overdue.append(order_id)
+    return overdue
+
+
+async def list_orders(
+    session: AsyncSession, location_id: uuid.UUID, statuses: frozenset[str]
+) -> list[OrderView]:
+    statement = (
+        select(Order)
+        .where(Order.location_id == location_id, Order.status.in_(statuses))
+        .order_by(Order.created_at)
+    )
+    return [view(order) for order in (await session.execute(statement)).scalars()]

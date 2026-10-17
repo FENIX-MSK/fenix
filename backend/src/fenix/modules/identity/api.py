@@ -36,6 +36,7 @@ __all__ = [
     "find_user",
     "find_user_by_username",
     "get_contact",
+    "get_user",
     "grant_staff",
     "is_staff",
     "list_staff",
@@ -116,6 +117,11 @@ async def find_user(session: AsyncSession, platform: Platform, external_id: str)
             )
         )
     ).scalar_one_or_none()
+    return _user(row) if row else None
+
+
+async def get_user(session: AsyncSession, user_id: uuid.UUID) -> User | None:
+    row = await session.get(IdentityUser, user_id)
     return _user(row) if row else None
 
 
