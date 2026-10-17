@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
-from fenix.modules.ordering import cart
+from fenix.modules.ordering import cart, kitchen
 from fenix.modules.ordering.models import Order, OrderCounter, OrderEvent, OrderItem
 from fenix.platform import outbox
 
@@ -30,6 +30,26 @@ Status = Literal[
 ]
 ActorKind = Literal["guest", "staff", "system"]
 PaymentMethod = Literal["online", "cash", "card"]
+Fulfilment = Literal["pickup", "delivery"]
+
+
+@dataclass(frozen=True, slots=True)
+class Address:
+    house: str
+    apartment: str
+    entrance: str = ""
+    floor: str = ""
+    comment: str = ""
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "house": self.house.strip()[:64],
+            "apartment": self.apartment.strip()[:16],
+            "entrance": self.entrance.strip()[:16],
+            "floor": self.floor.strip()[:16],
+            "comment": self.comment.strip()[:300],
+        }
+
 
 ACTIVE: frozenset[str] = frozenset({"new", "accepted", "cooking", "ready", "delivering"})
 FINAL: frozenset[str] = frozenset({"handed_over", "delivered", "cancelled"})
@@ -49,6 +69,8 @@ def _rule(to: Status, *actors: ActorKind, fulfilment: str | None = None) -> Rule
 # (from status, action) -> rule. Anything not listed is not allowed (AD-3 diagram).
 TRANSITIONS: dict[tuple[str, str], Rule] = {
     ("pending_payment", "payment_succeeded"): _rule("new", "system"),
+    # A paid preorder waits for its slot instead of going to the kitchen (story 5.5).
+    ("pending_payment", "schedule"): _rule("scheduled", "system"),
     ("pending_payment", "cancel"): _rule("cancelled", "system"),
     ("scheduled", "release"): _rule("new", "system"),
     ("scheduled", "cancel"): _rule("cancelled", "staff", "system"),
@@ -69,6 +91,7 @@ TRANSITIONS: dict[tuple[str, str], Rule] = {
 EVENT_NAMES: dict[str, str] = {
     "create": "placed",
     "payment_succeeded": "payment_confirmed",
+    "schedule": "payment_confirmed",
     "release": "released",
     "accept": "accepted",
     "start_cooking": "cooking_started",
@@ -137,6 +160,10 @@ class OrderView:
     created_at: datetime
     ready_at: datetime | None
     lines: list[OrderLine]
+    delivery_fee: int = 0
+    address: dict[str, str] | None = None
+    change_from: int | None = None
+    scheduled_for: datetime | None = None
     log: list[LogEntry] = field(default_factory=list)
     # Internal, for staff only.
     cancel_reason: str | None = None
@@ -180,6 +207,10 @@ def view(order: Order) -> OrderView:
             for e in order.events
         ],
         cancel_reason=order.cancel_reason,
+        delivery_fee=order.delivery_fee,
+        address=order.address,
+        change_from=order.change_from,
+        scheduled_for=order.scheduled_for,
     )
 
 
@@ -210,6 +241,10 @@ async def emit_event(
             "total": order.total,
             "comment": order.comment,
             "ready_at": order.ready_at.isoformat() if order.ready_at else None,
+            "scheduled_for": order.scheduled_for.isoformat() if order.scheduled_for else None,
+            "delivery_fee": order.delivery_fee,
+            "address": order.address,
+            "change_from": order.change_from,
             "timezone": timezone,
             "lines": [
                 {
@@ -257,10 +292,29 @@ async def place(
     payment_method: PaymentMethod,
     comment: str,
     now: datetime,
+    fulfilment: Fulfilment = "pickup",
+    address: Address | None = None,
+    change_from: int | None = None,
+    scheduled_for: datetime | None = None,
 ) -> OrderView:
     settings = await locations.get_order_settings(session, location_id, now)
     if not settings.status.is_open:
         raise OrderError("location_closed", details={"status": settings.status.text})
+    if settings.orders_paused:
+        raise OrderError("orders_paused")
+    if fulfilment == "delivery":
+        if not settings.delivery_enabled or settings.delivery_paused:
+            raise OrderError("delivery_unavailable")
+        if address is None or not address.house.strip() or not address.apartment.strip():
+            raise OrderError("address_required")
+    if scheduled_for is not None:
+        load = await kitchen.kitchen_load(session, location_id, settings)
+        available = kitchen.slots(settings, load.wait_minutes, now)
+        if scheduled_for not in available:
+            raise OrderError(
+                "slot_unavailable",
+                details={"slots": [slot.isoformat() for slot in available[:4]]},
+            )
     contact = await identity.get_contact(session, user_id)
     if not contact.phone or not contact.has_consent:
         raise OrderError("contact_required")
@@ -271,8 +325,17 @@ async def place(
     if any(line.problem for line in current.lines):
         raise OrderError("cart_has_unavailable")
 
+    delivery_fee = settings.delivery_fee if fulfilment == "delivery" else 0
+    total = current.total + delivery_fee
+    if change_from is not None and (payment_method != "cash" or change_from < total):
+        raise OrderError("bad_change")
+
     day = business_date(now, settings.timezone)
-    status: Status = "pending_payment" if payment_method == "online" else "new"
+    status: Status = (
+        "pending_payment"
+        if payment_method == "online"
+        else ("scheduled" if scheduled_for else "new")
+    )
     order = Order(
         location_id=location_id,
         user_id=user_id,
@@ -280,13 +343,18 @@ async def place(
         business_date=day,
         status=status,
         version=1,
-        fulfilment="pickup",
+        fulfilment=fulfilment,
+        address=address.as_dict() if fulfilment == "delivery" and address else None,
+        change_from=change_from,
+        delivery_fee=delivery_fee,
+        scheduled_for=scheduled_for,
+        ready_at=scheduled_for,
         payment_method=payment_method,
         comment=comment.strip()[:500],
         customer_name=contact.first_name,
         customer_phone=contact.phone,
         phone_verified=contact.phone_verified,
-        total=current.total,
+        total=total,
         items=[
             OrderItem(
                 position=position,
@@ -499,3 +567,11 @@ async def repeat(
         except cart.CartError:
             skipped.append(item.title)
     return RepeatResult(added, skipped)
+
+
+async def due_scheduled(session: AsyncSession, now: datetime) -> list[uuid.UUID]:
+    """Preorders whose slot is near enough to go to the kitchen (story 5.5)."""
+    statement = select(Order.id).where(
+        Order.status == "scheduled", Order.scheduled_for <= now + kitchen.RELEASE_LEAD
+    )
+    return list((await session.execute(statement)).scalars())

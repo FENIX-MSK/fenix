@@ -83,8 +83,15 @@ class Order(Base):
     customer_name: Mapped[str] = mapped_column(String(256))
     customer_phone: Mapped[str] = mapped_column(String(32))
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    # Kopecks, frozen at creation (AD-6).
+    # Kopecks, frozen at creation (AD-6); includes the delivery fee.
     total: Mapped[int] = mapped_column(Integer)
+    delivery_fee: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Delivery inside the complex (FR-7): {"house", "apartment", "entrance", "floor", "comment"}.
+    address: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    # Cash on delivery: the note the courier brings change for, kopecks.
+    change_from: Mapped[int | None] = mapped_column(Integer)
+    # Preorder (FR-8): the slot the order must be ready by; goes to the kitchen in advance.
+    scheduled_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Internal: guests never see the reason (FR-22).
     cancel_reason: Mapped[str | None] = mapped_column(Text)

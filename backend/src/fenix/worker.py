@@ -29,7 +29,7 @@ from fenix.telegram.gateway import TelegramGateway
 log = structlog.get_logger()
 
 POLL_SECONDS = 0.5
-SWEEP_SECONDS = 30.0
+SWEEP_SECONDS = 20.0
 
 
 def realtime_handler(redis: Redis) -> Handler:
@@ -39,12 +39,13 @@ def realtime_handler(redis: Redis) -> Handler:
         payload = event.payload
         signal = {
             "event": event.name,
-            "order_id": payload["order_id"],
+            "order_id": payload.get("order_id"),
             "status": payload.get("status"),
             "version": payload.get("version"),
         }
         await realtime.publish(redis, realtime.staff_channel(payload["location_id"]), signal)
-        await realtime.publish(redis, realtime.order_channel(payload["order_id"]), signal)
+        if payload.get("order_id"):
+            await realtime.publish(redis, realtime.order_channel(payload["order_id"]), signal)
 
     return handle
 
@@ -59,7 +60,7 @@ def build_dispatcher(
         *notifications.subscriptions(gateway, links),
     ]:
         dispatcher.subscribe(subscription.pattern, subscription.name, subscription.handler)
-    for pattern in ("ordering.order.*", "payments.payment.*"):
+    for pattern in ("ordering.order.*", "payments.payment.*", "locations.kitchen.*"):
         dispatcher.subscribe(pattern, "realtime.signal", realtime_handler(redis))
     return dispatcher
 
@@ -78,6 +79,20 @@ async def cancel_overdue_unpaid(factory: async_sessionmaker[AsyncSession], now: 
     if cancelled:
         log.info("worker.unpaid_cancelled", count=cancelled)
     return cancelled
+
+
+async def release_due_preorders(factory: async_sessionmaker[AsyncSession], now: datetime) -> int:
+    """Story 5.5: a preorder goes to the kitchen 30 minutes before its slot (AD-13)."""
+    async with factory() as session:
+        due = await ordering.due_scheduled(session, now)
+    released = 0
+    for order_id in due:
+        async with factory() as session, session.begin():
+            if await ordering.release_scheduled(session, order_id, now):
+                released += 1
+    if released:
+        log.info("worker.preorders_released", count=released)
+    return released
 
 
 async def run() -> None:
@@ -110,6 +125,7 @@ async def run() -> None:
                 if loop.time() - last_sweep >= SWEEP_SECONDS:
                     last_sweep = loop.time()
                     await cancel_overdue_unpaid(factory, datetime.now(UTC))
+                    await release_due_preorders(factory, datetime.now(UTC))
             except Exception:
                 # The database or Redis blinked: keep the process, try again shortly.
                 log.exception("worker.iteration_failed")

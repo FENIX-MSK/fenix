@@ -28,6 +28,14 @@ class OrderLineOut(BaseModel):
     total_price: int
 
 
+class AddressOut(BaseModel):
+    house: str = Field(max_length=64, description="Дом / корпус")
+    apartment: str = Field(max_length=16)
+    entrance: str = Field(default="", max_length=16)
+    floor: str = Field(default="", max_length=16)
+    comment: str = Field(default="", max_length=300)
+
+
 class OrderOut(BaseModel):
     id: uuid.UUID
     number: str = Field(description="«#047»")
@@ -45,11 +53,21 @@ class OrderOut(BaseModel):
     created_at: datetime
     ready_at: datetime | None
     lines: list[OrderLineOut]
+    delivery_fee: int = 0
+    address: AddressOut | None = None
+    change_from: int | None = None
+    scheduled_for: datetime | None = None
 
 
 class PlaceIn(BaseModel):
     payment_method: PaymentMethod
     comment: str = Field(default="", max_length=500)
+    fulfilment: Literal["pickup", "delivery"] = "pickup"
+    address: AddressOut | None = None
+    # Cash only: the banknote the courier brings change for, kopecks.
+    change_from: int | None = Field(default=None, ge=0)
+    # A slot from `GET /checkout`; absent = as soon as possible.
+    scheduled_for: datetime | None = None
 
 
 class TestPaymentIn(BaseModel):
@@ -113,6 +131,10 @@ def order_out(order: ordering.OrderView, payment: payments.OrderPayment) -> Orde
         created_at=order.created_at,
         ready_at=order.ready_at,
         lines=lines_out(order),
+        delivery_fee=order.delivery_fee,
+        address=AddressOut(**order.address) if order.address else None,
+        change_from=order.change_from,
+        scheduled_for=order.scheduled_for,
     )
 
 
@@ -154,6 +176,10 @@ async def place_order(
             payment_method=body.payment_method,
             comment=body.comment,
             now=datetime.now(UTC),
+            fulfilment=body.fulfilment,
+            address=ordering.Address(**body.address.model_dump()) if body.address else None,
+            change_from=body.change_from,
+            scheduled_for=body.scheduled_for,
         )
     except ordering.OrderError as exc:
         raise order_error(exc) from exc

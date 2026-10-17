@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from fenix.http.auth import CurrentStaff, LocationIdDep
 from fenix.http.deps import SessionDep
-from fenix.http.orders import OrderLineOut, lines_out, order_error, payment_error
+from fenix.http.orders import AddressOut, OrderLineOut, lines_out, order_error, payment_error
 from fenix.modules.identity import api as identity
 from fenix.modules.locations import api as locations
 from fenix.modules.ordering import api as ordering
@@ -53,15 +53,46 @@ class StaffOrderOut(BaseModel):
     created_at: datetime
     ready_at: datetime | None
     lines: list[OrderLineOut]
+    delivery_fee: int
+    address: AddressOut | None
+    change_from: int | None
+    scheduled_for: datetime | None
     # Internal (FR-22): staff see the reason, guests never do.
     cancel_reason: str | None
     log: list[LogEntryOut] = Field(default_factory=list)
+
+
+class KitchenOut(BaseModel):
+    level: Literal["calm", "moderate", "busy"]
+    in_work: int
+    wait_minutes: int
+    manual: bool
+    # A manual level ends at this moment; null with `manual` = until cancelled.
+    manual_until: datetime | None
 
 
 class BoardOut(BaseModel):
     orders: list[StaffOrderOut]
     prep_minutes: int
     timezone: str
+    kitchen: KitchenOut
+
+
+class KitchenIn(BaseModel):
+    # null: back to the automatic level.
+    level: Literal["calm", "moderate", "busy"] | None
+    # 30, 60 or null (until cancelled).
+    minutes: Literal[30, 60] | None = None
+
+
+def kitchen_out(load: ordering.KitchenLoad) -> KitchenOut:
+    return KitchenOut(
+        level=load.level,
+        in_work=load.in_work,
+        wait_minutes=load.wait_minutes,
+        manual=load.manual,
+        manual_until=load.manual_until,
+    )
 
 
 class ActionIn(BaseModel):
@@ -102,6 +133,10 @@ def staff_order_out(
         created_at=order.created_at,
         ready_at=order.ready_at,
         lines=lines_out(order),
+        delivery_fee=order.delivery_fee,
+        address=AddressOut(**order.address) if order.address else None,
+        change_from=order.change_from,
+        scheduled_for=order.scheduled_for,
         cancel_reason=order.cancel_reason,
         log=[
             LogEntryOut(
@@ -141,12 +176,24 @@ async def detailed(session: SessionDep, order: ordering.OrderView) -> StaffOrder
 async def board(session: SessionDep, location_id: LocationIdDep) -> BoardOut:
     orders = await ordering.list_orders(session, location_id, BOARD)
     paid = await payments.order_payments(session, [order.id for order in orders])
-    settings = await locations.get_order_settings(session, location_id, datetime.now(UTC))
+    now = datetime.now(UTC)
+    settings = await locations.get_order_settings(session, location_id, now)
     return BoardOut(
         orders=[staff_order_out(order, paid[order.id]) for order in orders],
         prep_minutes=settings.prep_minutes,
         timezone=settings.timezone,
+        kitchen=kitchen_out(await ordering.kitchen_load(session, location_id, now)),
     )
+
+
+@router.post("/kitchen")
+async def set_kitchen(
+    body: KitchenIn, session: SessionDep, location_id: LocationIdDep
+) -> KitchenOut:
+    """The manual kitchen level (FR-37); every board hears about it at once."""
+    now = datetime.now(UTC)
+    await locations.set_kitchen_override(session, location_id, body.level, body.minutes, now)
+    return kitchen_out(await ordering.kitchen_load(session, location_id, now))
 
 
 @router.get("/{order_id}")
@@ -173,7 +220,17 @@ async def act(
     if body.action == "accept" and ready_at is None:
         settings = await locations.get_order_settings(session, location_id, now)
         ready_at = now + timedelta(minutes=settings.prep_minutes)
-    if body.action == "hand_over" and payment.status != "paid":
+        # A preorder is due at its slot, not earlier (story 5.5).
+        if order.scheduled_for and order.scheduled_for > ready_at:
+            ready_at = order.scheduled_for
+    if not ordering.is_allowed(order, body.action, "staff"):
+        raise ApiError(
+            422,
+            "transition_not_allowed",
+            "This action is not available now",
+            {"status": order.status, "action": body.action},
+        )
+    if body.action in ("hand_over", "deliver") and payment.status != "paid":
         if body.paid_with is None:
             raise ApiError(422, "payment_required", "Mark how the order was paid")
         try:
