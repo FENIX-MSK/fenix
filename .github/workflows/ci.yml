@@ -28,6 +28,9 @@ jobs:
           --health-cmd "pg_isready -U fenix"
           --health-interval 5s
           --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
     env:
       TELEGRAM_BOT_TOKEN: "123456:CI-TOKEN"
     steps:

@@ -5,13 +5,14 @@ import { mockTelegramEnv, retrieveRawLaunchParams } from '@telegram-apps/sdk'
  * launch data but no Telegram client to talk to. Mock the client so the SDK works the same
  * way as inside Telegram; method calls are logged instead of sent.
  */
-export function mockTelegramClientInDev(): void {
+export function mockTelegramClientInDev(): boolean {
   const insideClient = 'TelegramWebviewProxy' in window || window.parent !== window
-  if (insideClient) return
+  if (insideClient) return false
   mockTelegramEnv({
     launchParams: retrieveRawLaunchParams(),
     onEvent([method, params]) {
       console.debug('[telegram mock]', method, params)
     },
   })
+  return true
 }

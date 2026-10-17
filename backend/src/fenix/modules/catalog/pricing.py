@@ -4,9 +4,12 @@ import uuid
 from collections import Counter
 from dataclasses import dataclass
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from fenix.modules.catalog.dish import dish_groups, load_stop_list, load_visible_dish
+from fenix.modules.catalog.models import Dish, Modifier
 
 
 class InvalidSelectionError(Exception):
@@ -78,4 +81,56 @@ async def price(
         total_price=unit_price * quantity,
         complete=not missing,
         missing_groups=missing,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class Quote:
+    """A price that never raises: what a cart line shows, available or not."""
+
+    price: Price | None
+    # InvalidSelectionError.reason when the selection cannot be ordered now.
+    problem: str | None
+    dish_name: str | None
+    size_name: str | None
+    modifier_names: list[str]
+    photo_key: str | None
+
+
+async def quote(
+    session: AsyncSession,
+    *,
+    location_id: uuid.UUID,
+    dish_id: uuid.UUID,
+    size_id: uuid.UUID,
+    modifier_ids: list[uuid.UUID],
+    quantity: int,
+) -> Quote:
+    dish = await session.get(Dish, dish_id, options=[selectinload(Dish.sizes)])
+    size = next((s for s in dish.sizes if s.id == size_id), None) if dish else None
+    names = {
+        m.id: m.name
+        for m in (
+            await session.execute(select(Modifier).where(Modifier.id.in_(modifier_ids)))
+        ).scalars()
+    }
+    try:
+        result: Price | None = await price(
+            session,
+            location_id=location_id,
+            dish_id=dish_id,
+            size_id=size_id,
+            modifier_ids=modifier_ids,
+            quantity=quantity,
+        )
+        problem = None
+    except InvalidSelectionError as exc:
+        result, problem = None, exc.reason
+    return Quote(
+        price=result,
+        problem=problem,
+        dish_name=dish.name if dish else None,
+        size_name=size.name if size else None,
+        modifier_names=[names[m] for m in modifier_ids if m in names],
+        photo_key=dish.photo_key if dish else None,
     )

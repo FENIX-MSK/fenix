@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 16:52
-last_updated: 10-17-2026 00:48
+last_updated: 10-17-2026 01:05
 project: fenix
 project_key: NOKEY
 tracking_system: file-system
@@ -54,22 +54,22 @@ development_status:
   2-7-часы-работы-и-информация-о-кафе: review
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-корзина: backlog
-  3-2-оформление-самовывоза-контакты-и-согласие: backlog
-  3-3-создание-заказа-с-оплатой-на-месте: backlog
-  3-4-уведомления-гостю-через-outbox: backlog
-  3-5-тестовая-онлайн-оплата-и-автоотмена: backlog
-  3-6-служебный-чат-и-уведомления-персоналу: backlog
-  3-7-доска-заказов-в-реальном-времени: backlog
-  3-8-ведение-заказа-по-статусам-и-оплата-на-месте: backlog
-  3-9-отмена-заказа-и-возврат: backlog
-  3-10-статус-заказа-у-гостя-в-реальном-времени: backlog
+  epic-3: in-progress
+  3-1-корзина: review
+  3-2-оформление-самовывоза-контакты-и-согласие: review
+  3-3-создание-заказа-с-оплатой-на-месте: review
+  3-4-уведомления-гостю-через-outbox: review
+  3-5-тестовая-онлайн-оплата-и-автоотмена: review
+  3-6-служебный-чат-и-уведомления-персоналу: review
+  3-7-доска-заказов-в-реальном-времени: review
+  3-8-ведение-заказа-по-статусам-и-оплата-на-месте: review
+  3-9-отмена-заказа-и-возврат: review
+  3-10-статус-заказа-у-гостя-в-реальном-времени: review
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-история-заказов: backlog
-  4-2-повтор-заказа: backlog
+  epic-4: in-progress
+  4-1-история-заказов: review
+  4-2-повтор-заказа: review
   epic-4-retrospective: optional
 
   epic-5: backlog

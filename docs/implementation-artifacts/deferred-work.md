@@ -21,3 +21,15 @@
 - source_spec: `docs/implementation-artifacts/spec-2-5-dish-photos-garage.md`
   summary: Периодически удалять из бакета `media` объекты, на которые не ссылается ни одно блюдо или фото кафе.
   evidence: При замене фото старый объект остаётся (ключи неизменяемы, удаление до коммита небезопасно).
+- source_spec: `docs/implementation-artifacts/spec-3-2-checkout-contacts-consent.md`
+  summary: Добавить ссылку на политику конфиденциальности к согласию на оформлении.
+  evidence: Текст политики готовит заказчик (PRD §11, открытый вопрос 1); пока согласие без ссылки.
+- source_spec: `docs/implementation-artifacts/spec-3-5-test-payment-autocancel.md`
+  summary: При подключении реального эквайринга возвращать деньги, если провайдер подтвердил оплату уже закрытой попытки (`payment_cancelled`).
+  evidence: `MockProvider` такую оплату просто отклоняет; реальный провайдер может успеть списать деньги.
+- source_spec: `docs/implementation-artifacts/spec-3-7-realtime-board.md`
+  summary: Исключать из отчётов (эпик 7) заказы смоук-пользователя (Telegram id 1, комментарий «smoke»).
+  evidence: Смоук после каждого деплоя в часы работы создаёт и отменяет один онлайн-заказ — он занимает номер дня.
+- source_spec: `docs/implementation-artifacts/spec-3-9-cancel-and-refund.md`
+  summary: Показать в отчётах отмены заказов, оплаченных на кассе (возврат наличных — вне системы).
+  evidence: Система возвращает только онлайн-оплату.

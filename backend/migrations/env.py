@@ -1,9 +1,13 @@
 import asyncio
+import importlib
+import importlib.util
+import pkgutil
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy.engine import Connection
 
+import fenix.modules
 from fenix.platform.config import get_settings
 from fenix.platform.db import Base, create_engine
 
@@ -11,10 +15,13 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import model modules here as they appear so autogenerate sees them.
-import fenix.modules.catalog.models  # noqa: E402
-import fenix.modules.identity.models  # noqa: E402
-import fenix.modules.locations.models  # noqa: F401, E402
+# Every module's models, found by name: a new module's tables are picked up without
+# editing this file, and no linter can drop "unused" imports here (that once made
+# autogenerate emit DROP TABLE for everything).
+for module in pkgutil.iter_modules(fenix.modules.__path__):
+    if importlib.util.find_spec(f"fenix.modules.{module.name}.models"):
+        importlib.import_module(f"fenix.modules.{module.name}.models")
+importlib.import_module("fenix.platform.outbox")
 
 target_metadata = Base.metadata
 

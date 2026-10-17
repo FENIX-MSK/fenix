@@ -6,7 +6,7 @@ from aiogram.types import MenuButtonWebApp, WebAppInfo
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from fenix.platform.config import Settings
-from fenix.telegram.handlers import start
+from fenix.telegram.handlers import staff_chat, start
 
 
 def create_bot(settings: Settings) -> Bot:
@@ -24,6 +24,7 @@ def create_dispatcher(
     # Workflow data: handlers receive these by parameter name.
     dispatcher = Dispatcher(settings=settings, session_factory=session_factory)
     dispatcher.include_router(start.create_router())
+    dispatcher.include_router(staff_chat.create_router())
     return dispatcher
 
 
