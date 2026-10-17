@@ -67,9 +67,9 @@ development_status:
   3-10-статус-заказа-у-гостя-в-реальном-времени: review
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-история-заказов: backlog
-  4-2-повтор-заказа: backlog
+  epic-4: in-progress
+  4-1-история-заказов: review
+  4-2-повтор-заказа: review
   epic-4-retrospective: optional
 
   epic-5: backlog

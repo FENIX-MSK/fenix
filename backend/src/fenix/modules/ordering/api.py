@@ -19,6 +19,7 @@ from fenix.modules.ordering.orders import (
     OrderLine,
     OrderView,
     PaymentMethod,
+    RepeatResult,
 )
 from fenix.platform.outbox import Event, Subscription
 
@@ -36,13 +37,17 @@ __all__ = [
     "OrderLine",
     "OrderView",
     "PaymentMethod",
+    "RepeatResult",
+    "active_guest_order",
     "add_to_cart",
     "cancel_unpaid",
     "get_order",
+    "guest_orders",
     "list_orders",
     "overdue_unpaid",
     "place_order",
     "remove_from_cart",
+    "repeat_order",
     "set_cart_quantity",
     "subscriptions",
     "transition",
@@ -114,6 +119,29 @@ async def place_order(
 async def get_order(session: AsyncSession, order_id: uuid.UUID) -> OrderView | None:
     order = await orders.get(session, order_id)
     return orders.view(order) if order else None
+
+
+async def guest_orders(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    limit: int,
+    before: tuple[datetime, uuid.UUID] | None = None,
+) -> list[OrderView]:
+    """The guest's order history, newest first (FR-17)."""
+    return await orders.guest_orders(session, user_id, limit=limit, before=before)
+
+
+async def active_guest_order(session: AsyncSession, user_id: uuid.UUID) -> OrderView | None:
+    """The guest's latest order that is not finished yet (the banner over the menu)."""
+    return await orders.active_guest_order(session, user_id)
+
+
+async def repeat_order(
+    session: AsyncSession, order_id: uuid.UUID, user_id: uuid.UUID, location_id: uuid.UUID
+) -> RepeatResult:
+    """Raises OrderError order_not_found (someone else's order too)."""
+    return await orders.repeat(session, order_id, user_id, location_id)
 
 
 async def list_orders(

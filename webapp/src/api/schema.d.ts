@@ -199,10 +199,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * My Orders
+         * @description The guest's orders, newest first (FR-17).
+         */
+        get: operations["my_orders_api_v1_orders_get"];
         put?: never;
         /** Place Order */
         post: operations["place_order_api_v1_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active Order
+         * @description The banner over the menu while an order is in progress.
+         */
+        get: operations["active_order_api_v1_orders_active_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -240,6 +264,26 @@ export interface paths {
          * @description «Повторить» after a failed online payment: a new attempt.
          */
         post: operations["retry_payment_api_v1_orders__order_id__payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orders/{order_id}/repeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Repeat Order
+         * @description «Повторить»: the lines go back into the cart at today's prices (FR-18).
+         */
+        post: operations["repeat_order_api_v1_orders__order_id__repeat_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1251,6 +1295,13 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** OrdersPage */
+        OrdersPage: {
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Orders */
+            orders: components["schemas"]["OrderOut"][];
+        };
         /** PaymentIn */
         PaymentIn: {
             /**
@@ -1326,6 +1377,14 @@ export interface components {
              * @description 0 removes the line
              */
             quantity: number;
+        };
+        /** RepeatOut */
+        RepeatOut: {
+            /** Added */
+            added: number;
+            cart: components["schemas"]["CartOut"];
+            /** Skipped */
+            skipped: string[];
         };
         /** SizeIn */
         SizeIn: {
@@ -2077,6 +2136,49 @@ export interface operations {
             };
         };
     };
+    my_orders_api_v1_orders_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrdersPage"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     place_order_api_v1_orders_post: {
         parameters: {
             query?: never;
@@ -2099,6 +2201,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    active_order_api_v1_orders_active_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"] | null;
                 };
             };
             /** @description Client error */
@@ -2183,6 +2325,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Client error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    repeat_order_api_v1_orders__order_id__repeat_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepeatOut"];
                 };
             };
             /** @description Client error */

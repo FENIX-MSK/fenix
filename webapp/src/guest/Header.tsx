@@ -4,11 +4,12 @@ import { SunMark } from './SunMark'
 interface Props {
   location: LocationState
   onAbout: () => void
+  onHistory: () => void
   /** Only for staff members (FR-19). */
   onStaff?: () => void
 }
 
-export function Header({ location, onAbout, onStaff }: Props) {
+export function Header({ location, onAbout, onHistory, onStaff }: Props) {
   return (
     <header className="header">
       <div className="header-brand">
@@ -26,6 +27,18 @@ export function Header({ location, onAbout, onStaff }: Props) {
           Персонал
         </button>
       )}
+      <button type="button" className="icon-button" onClick={onHistory} aria-label="Мои заказы">
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+          <path d="M9 8.5h6M9 12h6M9 15.5h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
       <button type="button" className="icon-button" onClick={onAbout} aria-label="О кафе">
         <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="1.5" />

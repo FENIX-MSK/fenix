@@ -3,11 +3,13 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { api } from './api/client'
 import type { MenuDish, Order } from './api/types'
 import { AboutScreen } from './guest/AboutScreen'
+import { ActiveOrderBanner } from './guest/ActiveOrderBanner'
 import { CartBar } from './guest/CartBar'
 import { CartScreen } from './guest/CartScreen'
 import { CheckoutScreen, type PlaceOrder } from './guest/CheckoutScreen'
 import { DishSheet } from './guest/DishSheet'
 import { Header } from './guest/Header'
+import { HistoryScreen } from './guest/HistoryScreen'
 import { MenuScreen } from './guest/MenuScreen'
 import { OrderScreen } from './guest/OrderScreen'
 import { orderErrorText } from './guest/orderTexts'
@@ -17,7 +19,7 @@ import { useMe } from './guest/useMe'
 import { useMenu } from './guest/useMenu'
 import { platform } from './platform'
 
-type Screen = 'menu' | 'about' | 'staff' | 'cart' | 'checkout' | 'order'
+type Screen = 'menu' | 'about' | 'staff' | 'cart' | 'checkout' | 'order' | 'history'
 
 const StaffApp = lazy(() => import('./staff/StaffApp'))
 
@@ -49,6 +51,11 @@ export default function App() {
     LINKED_ORDER && !LINKED_FOR_STAFF ? { id: LINKED_ORDER } : null,
   )
   const { reload: reloadCart } = useCart()
+  const [skipped, setSkipped] = useState<string[]>([])
+  const openOrder = useCallback((placed: Order) => {
+    setOrder({ id: placed.id, initial: placed })
+    setScreen('order')
+  }, [])
 
   const placeOrder = useCallback(
     async ({ paymentMethod, comment }: PlaceOrder): Promise<string | null> => {
@@ -79,7 +86,30 @@ export default function App() {
   }
   // Waiting to learn whether the user is staff before falling back to the menu.
   if (screen === 'staff' && me.kind === 'loading') return <div className="screen" aria-busy="true" />
-  if (screen === 'cart') return <CartScreen onBack={openMenu} onCheckout={() => setScreen('checkout')} />
+  if (screen === 'cart') {
+    return (
+      <CartScreen
+        onBack={() => {
+          setSkipped([])
+          openMenu()
+        }}
+        onCheckout={() => setScreen('checkout')}
+        skipped={skipped}
+      />
+    )
+  }
+  if (screen === 'history') {
+    return (
+      <HistoryScreen
+        onBack={openMenu}
+        onOpen={openOrder}
+        onRepeated={(names) => {
+          setSkipped(names)
+          setScreen('cart')
+        }}
+      />
+    )
+  }
   if (screen === 'checkout') return <CheckoutScreen onBack={() => setScreen('cart')} onPlace={placeOrder} />
   if (screen === 'order' && order) return <OrderScreen orderId={order.id} initial={order.initial} onBack={openMenu} />
   if (screen === 'about') {
@@ -90,8 +120,10 @@ export default function App() {
       <Header
         location={location}
         onAbout={() => setScreen('about')}
+        onHistory={() => setScreen('history')}
         onStaff={isStaff ? () => setScreen('staff') : undefined}
       />
+      <ActiveOrderBanner onOpen={openOrder} />
       <main>
         <MenuScreen menu={menu} onRetry={reloadMenu} onOpenDish={setOpenDish} />
       </main>

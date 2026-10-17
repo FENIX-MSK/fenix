@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -435,3 +435,67 @@ async def list_orders(
         .order_by(Order.created_at)
     )
     return [view(order) for order in (await session.execute(statement)).scalars()]
+
+
+ACTIVE_FOR_GUEST: frozenset[str] = frozenset(
+    {"pending_payment", "scheduled", "new", "accepted", "cooking", "ready", "delivering"}
+)
+
+
+async def guest_orders(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    limit: int,
+    before: tuple[datetime, uuid.UUID] | None = None,
+) -> list[OrderView]:
+    """The guest's orders, newest first; keyset pages by (created_at, id)."""
+    statement = select(Order).where(Order.user_id == user_id)
+    if before is not None:
+        statement = statement.where(tuple_(Order.created_at, Order.id) < tuple_(*before))
+    statement = statement.order_by(Order.created_at.desc(), Order.id.desc()).limit(limit)
+    return [view(order) for order in (await session.execute(statement)).scalars()]
+
+
+async def active_guest_order(session: AsyncSession, user_id: uuid.UUID) -> OrderView | None:
+    statement = (
+        select(Order)
+        .where(Order.user_id == user_id, Order.status.in_(ACTIVE_FOR_GUEST))
+        .order_by(Order.created_at.desc())
+        .limit(1)
+    )
+    order = (await session.execute(statement)).scalar_one_or_none()
+    return view(order) if order else None
+
+
+@dataclass(frozen=True, slots=True)
+class RepeatResult:
+    added: int
+    skipped: list[str]
+
+
+async def repeat(
+    session: AsyncSession, order_id: uuid.UUID, user_id: uuid.UUID, location_id: uuid.UUID
+) -> RepeatResult:
+    """Put the order's lines back into the cart at today's prices (FR-18). Lines that are
+    gone from the menu or stopped are skipped and named."""
+    order = await session.get(Order, order_id)
+    if order is None or order.user_id != user_id:
+        raise OrderError("order_not_found", 404)
+    added, skipped = 0, []
+    for item in order.items:
+        try:
+            async with session.begin_nested():
+                await cart.add(
+                    session,
+                    user_id,
+                    location_id,
+                    dish_id=item.dish_id,
+                    size_id=item.size_id,
+                    modifier_ids=[uuid.UUID(m) for m in item.modifier_ids],
+                    quantity=item.quantity,
+                )
+            added += 1
+        except cart.CartError:
+            skipped.append(item.title)
+    return RepeatResult(added, skipped)
